@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
 interface IVeWant {
     function create_lock(uint256 _amount, uint256 _unlockTime) external;

@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.12;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
+import "../../interfaces/common/gauge/IGauge.sol";
 import "../../interfaces/common/gauge/IGaugeStrategy.sol";
+import "../../interfaces/common/gauge/IVeWantFeeDistributor.sol";
 
-contract GaugeManager is Ownable, Pausable {
-    using SafeERC20 for IERC20;
+contract GaugeManager is Initializable, OwnableUpgradeable, PausableUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
      * @dev Beefy Contracts:
@@ -18,8 +21,8 @@ contract GaugeManager is Ownable, Pausable {
      * {keeper} - Address to manage a few lower risk features of the strat.
      * {vault} - Address of the vault that controls the strategy's funds.
      */
-    address public feeDistributor;
-    address public gaugeProxy;
+    IVeWantFeeDistributor public feeDistributor;
+    IGauge public gaugeProxy;
     address public keeper;
     address public vault;
 
@@ -33,14 +36,16 @@ contract GaugeManager is Ownable, Pausable {
      * @param _keeper address to use as alternative owner.
      * @param _vault address of parent vault.
      */
-    constructor(
+    function managerInitialize(
         address _feeDistributor,
         address _gaugeProxy,
         address _keeper,
         address _vault
-    ) public {
-        feeDistributor = _feeDistributor;
-        gaugeProxy = _gaugeProxy;
+    ) internal initializer {
+        __Ownable_init();
+
+        feeDistributor = IVeWantFeeDistributor(_feeDistributor);
+        gaugeProxy = IGauge(_gaugeProxy);
         keeper = _keeper;
         vault = _vault;
         extendLockTime = true;
@@ -69,7 +74,7 @@ contract GaugeManager is Ownable, Pausable {
      * @param _feeDistributor new fee distributor address.
      */
     function setFeeDistributor(address _feeDistributor) external onlyOwner {
-        feeDistributor = _feeDistributor;
+        feeDistributor = IVeWantFeeDistributor(_feeDistributor);
     }
 
     /**
@@ -77,7 +82,7 @@ contract GaugeManager is Ownable, Pausable {
      * @param _gaugeProxy new gauge proxy address.
      */
     function setGaugeProxy(address _gaugeProxy) external onlyOwner {
-        gaugeProxy = _gaugeProxy;
+        gaugeProxy = IGauge(_gaugeProxy);
     }
 
     /**
@@ -113,10 +118,10 @@ contract GaugeManager is Ownable, Pausable {
         isStrategy[_strategy] = true;
 
         if (_approveGauge) {
-            IERC20 _want = IGaugeStrategy(_strategy).want();
+            IERC20Upgradeable _want = IGaugeStrategy(_strategy).want();
             address _gauge = IGaugeStrategy(_strategy).gauge();
             _want.safeApprove(_gauge, 0);
-            _want.safeApprove(_gauge, uint256(-1));
+            _want.safeApprove(_gauge, type(uint256).max);
         }
     }
 
@@ -129,7 +134,7 @@ contract GaugeManager is Ownable, Pausable {
         isStrategy[_strategy] = false;
 
         if (_disapproveGauge) {
-            IERC20 _want = IGaugeStrategy(_strategy).want();
+            IERC20Upgradeable _want = IGaugeStrategy(_strategy).want();
             address _gauge = IGaugeStrategy(_strategy).gauge();
             _want.safeApprove(_gauge, 0);
         }
