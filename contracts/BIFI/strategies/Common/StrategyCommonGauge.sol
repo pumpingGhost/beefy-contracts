@@ -96,6 +96,14 @@ contract StrategyCommonGauge is StratManager, FeeManager, GasThrottler {
         }
     }
 
+    function notifyRewards() external onlyOwner {
+        uint256 beforeWantBal = balanceOf();
+        depositUnderlying();
+        wantHarvested = balanceOfWant().sub(beforeWantBal);
+        lastHarvest = block.timestamp;
+        emit StratHarvest(msg.sender, wantHarvested, balanceOf());
+    }
+
     function harvest() external gasThrottle virtual {
         _harvest(tx.origin);
     }
@@ -110,7 +118,7 @@ contract StrategyCommonGauge is StratManager, FeeManager, GasThrottler {
 
     // compounds earnings and charges performance fee
     function _harvest(address callFeeRecipient) internal whenNotPaused {
-        uint256 beforeWantBal = balanceOfWant();
+        uint256 beforeWantBal = balanceOf();
         uint256 beforeOutputBal = IERC20(output).balanceOf(address(this));
 
         IGaugeStaker(gaugeStaker).claimVeWantReward();
