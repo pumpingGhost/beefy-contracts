@@ -39,6 +39,7 @@ const config: DeploymentConfig = {
       accounts,
     },
     polygon: {
+      // url: "https://speedy-nodes-nyc.moralis.io/1a92fabc9eec27037883583a/polygon/mainnet/archive",
       url: "https://polygon-rpc.com/",
       chainId: 137,
       accounts,
