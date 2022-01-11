@@ -12,14 +12,17 @@ const chainData = addressBook[chainName];
 const { beefyfinance } = chainData.platforms;
 
 const config = {
-  vault: "0xacC09486C9e34aa1Dff13b2E64d5482A3648D018",
+  vault: "0xB5e9F4E4C6C6064cb029d4B903Bf9ADE6Fc442f8",
   vaultContract: "BeefyVaultV6",
   strategyContract: "StrategyQuickswapDualRewardLP",
   testAmount: ethers.utils.parseEther("5"),
   wnative: chainData.tokens.WNATIVE.address,
-  keeper: beefyfinance.keeper,
-  strategyOwner: beefyfinance.strategyOwner,
-  vaultOwner: beefyfinance.vaultOwner,
+  keeper: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  // keeper: beefyfinance.keeper,
+  strategyOwner: "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+  // strategyOwner: beefyfinance.strategyOwner,
+  vaultOwner: "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+  // vaultOwner: beefyfinance.vaultOwner,
 };
 
 describe("VaultLifecycleTest", () => {
@@ -151,7 +154,9 @@ describe("VaultLifecycleTest", () => {
     const stratKeeper = await strategy.keeper();
 
     expect(vaultOwner).to.equal(config.vaultOwner);
+    console.log("vault owner correct")
     expect(stratOwner).to.equal(config.strategyOwner);
+    console.log("strat owner correct")
     expect(stratKeeper).to.equal(config.keeper);
   }).timeout(TIMEOUT);
 
