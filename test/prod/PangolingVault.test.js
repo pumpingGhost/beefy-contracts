@@ -35,7 +35,7 @@ describe("VaultLifecycleTest", () => {
     const strategyAddr = await vault.strategy();
     strategy = await ethers.getContractAt(config.strategyContract, strategyAddr);
 
-    const unirouterAddr = await strategy.unirouter();
+    const unirouterAddr = await strategy.pngRouter();
     const unirouterData = getUnirouterData(unirouterAddr);
     unirouter = await ethers.getContractAt(unirouterData.interface, unirouterAddr);
     want = await getVaultWant(vault, config.wnative);
