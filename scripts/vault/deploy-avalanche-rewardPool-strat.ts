@@ -2,7 +2,6 @@ import hardhat, { ethers, web3 } from "hardhat";
 import { addressBook } from "blockchain-addressbook";
 import { predictAddresses } from "../../utils/predictAddresses";
 import { setCorrectCallFee } from "../../utils/setCorrectCallFee";
-import { setPendingRewardsFunctionName } from "../../utils/setPendingRewardsFunctionName";
 import { verifyContract } from "../../utils/verifyContract";
 import { BeefyChain } from "../../utils/beefyChain";
 
@@ -11,31 +10,42 @@ const registerSubsidy = require("../../utils/registerSubsidy");
 const {
   platforms: { pangolin, beefyfinance },
   tokens: {
+    PNG: { address: PNG },
     MIM: { address: MIM },
     AVAX: { address: AVAX },
-    PNG: { address: PNG },
+    USDCe: { address: USDCe },
+    DAIe: { address: DAIe },
+    TIME: { address: TIME },
   },
 } = addressBook.avax;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x239aAE4AaBB5D60941D7DFFAeaFE8e063C63Ab25"); // LP addr
+const want = web3.utils.toChecksumAddress("0xbA09679Ab223C6bdaf44D45Ba2d7279959289AB0"); // TODO
 
+// TODO
 const vaultParams = {
-  mooName: "Moo Pangolin MIM-AVAX",
-  mooSymbol: "mooPangolinMIM-AVAX",
+  mooName: "Moo Pangolin AVAX-DAI.e", 
+  mooSymbol: "mooPangolinAVAX-DAI.e",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0x1f806f7C8dED893fd3caE279191ad7Aa3798E928", // mass reward pool
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
+  poolId: 6, // TODO
+  chef: pangolin.minichef,
+  unirouter: pangolin.router,
+  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
+  keeper: beefyfinance.keeper,
+  beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
+  outputToNativeRoute: [PNG, AVAX],
+  outputToLp0Route: [PNG, AVAX], // TODO
+  outputToLp1Route: [PNG, AVAX, DAIe], // TODO
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyPangolinLP",
+  strategy: "StrategyPangolinMiniChefLP",
 };
 
 async function main() {
@@ -70,9 +80,16 @@ async function main() {
 
   const strategyConstructorArguments = [
     strategyParams.want,
-    strategyParams.rewardPool,
+    strategyParams.poolId,
+    strategyParams.chef,
     vault.address,
-    strategyParams.strategist
+    strategyParams.unirouter,
+    strategyParams.keeper,
+    strategyParams.strategist,
+    strategyParams.beefyFeeRecipient,
+    strategyParams.outputToNativeRoute,
+    strategyParams.outputToLp0Route,
+    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -82,7 +99,7 @@ async function main() {
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
-  console.log("RewardPool:", strategyParams.rewardPool);
+  console.log("PoolId:", strategyParams.poolId);
 
   console.log();
   console.log("Running post deployment");
@@ -95,8 +112,8 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-//   await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain); // CALL_FEE is preset for Pangolin
+ // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain); // prefer to do it manually
   console.log();
 
   await Promise.all(verifyContractsPromises);
