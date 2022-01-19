@@ -16,31 +16,34 @@ const {
     USDCe: { address: USDCe },
     DAIe: { address: DAIe },
     TIME: { address: TIME },
+    SPELL: { address: SPELL },
+    XAVA: { address: XAVA },
   },
 } = addressBook.avax;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xbA09679Ab223C6bdaf44D45Ba2d7279959289AB0"); // TODO
+const want = web3.utils.toChecksumAddress("0x4a2cB99e8d91f82Cf10Fb97D43745A1f23e47caA"); // TODO
+const ROCO = web3.utils.toChecksumAddress("0xb2a85C5ECea99187A977aC34303b80AcbDdFa208")
 
 // TODO
 const vaultParams = {
-  mooName: "Moo Pangolin AVAX-DAI.e", 
-  mooSymbol: "mooPangolinAVAX-DAI.e",
+  mooName: "Moo Pangolin ROCO-AVAX", 
+  mooSymbol: "mooPangolinROCO-AVAX",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 6, // TODO
+  poolId: 17, // TODO
   chef: pangolin.minichef,
   unirouter: pangolin.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [PNG, AVAX],
-  outputToLp0Route: [PNG, AVAX], // TODO
-  outputToLp1Route: [PNG, AVAX, DAIe], // TODO
+  outputToLp0Route: [PNG, AVAX, ROCO], // TODO
+  outputToLp1Route: [PNG, AVAX], // TODO
 };
 
 const contractNames = {
