@@ -18,29 +18,27 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x3f245C6f18442Bd6198d964C567a01BD4202e290"); // LP addr
-const KIRO = web3.utils.toChecksumAddress("0xB382C1cfA622795a534e5bd56Fac93d59BAc8B0D");
+const want = web3.utils.toChecksumAddress("0xE6672538c35508b011b82C986B8822ECF26b1cbC"); // LP addr
+const BOOK = web3.utils.toChecksumAddress("0x8192759Bf7f247cC92F74E39B3A4225516624fC1");
 // const DQUICK = web3.utils.toChecksumAddress("0xf28164a485b0b2c90639e47b0f377b4a438a16b1")
 
 const vaultParams = {
-  mooName: "Moo QuickSwap KIRO-MATIC",
-  mooSymbol: "mooQuickSwapKIRO-MATIC",
+  mooName: "Moo QuickSwap BOOK-MATIC",
+  mooSymbol: "mooQuickSwapBOOK-MATIC",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0xfF22Bf1f778BcD6741D823b077285533EC582F78",
+  rewardPool: "0xd1E4545adeDBa83Ee85768612b0f1cdC6D69C493",
   unirouter: quickswap.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
-  // keeper: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // test account
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   output0ToNativeRoute: [QUICK, MATIC], // ["0x831753DD7087CaC61aB5644b308642cc1c33Dc13", "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"]
-  output1ToNativeRoute: [KIRO, MATIC],
+  output1ToNativeRoute: [MATIC],
   nativeToLp0Route: [MATIC],
-  nativeToLp1Route: [MATIC, KIRO],
-  //pendingRewardsFunctionName: "pendingSushi", // used for rewardsAvailable(), use correct function name from masterchef
+  nativeToLp1Route: [MATIC, BOOK],
 };
 
 const contractNames = {
@@ -113,7 +111,7 @@ async function main() {
     );
   }
   // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
+  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 
   await Promise.all(verifyContractsPromises);

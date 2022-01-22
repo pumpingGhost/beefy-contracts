@@ -15,7 +15,7 @@ const {
     },
 } = addressBook.fantom;
 
-const shouldVerifyOnEtherscan = false;
+const shouldVerifyOnEtherscan = true;
 
 // TODO
 const vaultParams = {

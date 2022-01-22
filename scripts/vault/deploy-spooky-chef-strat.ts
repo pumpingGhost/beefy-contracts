@@ -9,43 +9,42 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { quickswap, beefyfinance },
+  platforms: { spookyswap, beefyfinance },
   tokens: {
-    MATIC: { address: MATIC },
-    QUICK: { address: QUICK },
+    BTC: { address: BTC },
     ETH: { address: ETH },
-    USDC: { address: USDC },
-    USDT: { address: USDT },
+    BOO: { address: BOO },
+    FTM: { address: FTM },
   },
-} = addressBook.polygon;
+} = addressBook.fantom;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x8BEbd067b8F17699707B02e37956f846dfB0932A"); // TODO
-const ORARE = web3.utils.toChecksumAddress("0xFF2382Bd52efaceF02Cc895bcBFc4618608AA56F");
+const want = web3.utils.toChecksumAddress("0xEc454EdA10accdD66209C57aF8C12924556F3aBD");
 
-// TODO
 const vaultParams = {
-  mooName: "Moo QuickSwap ORARE-USDT",
-  mooSymbol: "mooQuickSwapORARE-USDT",
+  mooName: "Moo Boo BTC-ETH",
+  mooSymbol: "mooBooBTC-ETH",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0xA50D6c54080e81C9948e4E8375C8F468478A99Df", // TODO
-  unirouter: quickswap.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
+  poolId: 35,
+  chef: spookyswap.masterchef,
+  unirouter: spookyswap.router,
+  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [QUICK, MATIC],
-  outputToLp0Route: [QUICK, MATIC, USDT], // TODO
-  outputToLp1Route: [QUICK, MATIC, USDT, ORARE], // TODO
+  outputToNativeRoute: [BOO, FTM],
+  outputToLp0Route: [BOO, FTM, BTC],
+  outputToLp1Route: [BOO, FTM, ETH],
+  pendingRewardsFunctionName: "pendingBoo", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyPolygonQuickLP", // TODO
+  strategy: "StrategyCommonChefLP",
 };
 
 async function main() {
@@ -80,7 +79,8 @@ async function main() {
 
   const strategyConstructorArguments = [
     strategyParams.want,
-    strategyParams.rewardPool,
+    strategyParams.poolId,
+    strategyParams.chef,
     vault.address,
     strategyParams.unirouter,
     strategyParams.keeper,
@@ -98,7 +98,7 @@ async function main() {
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
-  console.log("RewardPool:", strategyParams.rewardPool);
+  console.log("PoolId:", strategyParams.poolId);
 
   console.log();
   console.log("Running post deployment");
@@ -111,8 +111,8 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
+    await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+ // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 
   await Promise.all(verifyContractsPromises);

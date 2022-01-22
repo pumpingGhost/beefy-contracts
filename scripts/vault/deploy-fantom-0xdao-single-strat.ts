@@ -9,43 +9,44 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { quickswap, beefyfinance },
+  platforms: { spookyswap, beefyfinance },
   tokens: {
-    MATIC: { address: MATIC },
-    QUICK: { address: QUICK },
-    ETH: { address: ETH },
+    FTM: { address: FTM },
+    MIM: { address: MIM },
     USDC: { address: USDC },
-    USDT: { address: USDT },
   },
-} = addressBook.polygon;
+} = addressBook.fantom;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x8BEbd067b8F17699707B02e37956f846dfB0932A"); // TODO
-const ORARE = web3.utils.toChecksumAddress("0xFF2382Bd52efaceF02Cc895bcBFc4618608AA56F");
+const want = web3.utils.toChecksumAddress("0x82f0B8B456c1A451378467398982d4834b6829c1");
+const OXD = web3.utils.toChecksumAddress("0xc165d941481e68696f43EE6E99BFB2B23E0E3114");
 
-// TODO
+const masterchef = web3.utils.toChecksumAddress("0xa7821C3e9fC1bF961e280510c471031120716c3d");
+
+
 const vaultParams = {
-  mooName: "Moo QuickSwap ORARE-USDT",
-  mooSymbol: "mooQuickSwapORARE-USDT",
+  mooName: "Moo OXD MIM",
+  mooSymbol: "mooOXDMIM",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0xA50D6c54080e81C9948e4E8375C8F468478A99Df", // TODO
-  unirouter: quickswap.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
+  poolId: 6,
+  chef: masterchef,
+  unirouter: spookyswap.router,
+  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [QUICK, MATIC],
-  outputToLp0Route: [QUICK, MATIC, USDT], // TODO
-  outputToLp1Route: [QUICK, MATIC, USDT, ORARE], // TODO
+  outputToNativeRoute: [OXD, FTM],
+  outputToWantRoute: [OXD, USDC, MIM],
+  pendingRewardsFunctionName: "pendingOXD", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyPolygonQuickLP", // TODO
+  strategy: "StrategyCommonChefSingle",
 };
 
 async function main() {
@@ -80,15 +81,15 @@ async function main() {
 
   const strategyConstructorArguments = [
     strategyParams.want,
-    strategyParams.rewardPool,
+    strategyParams.poolId,
+    strategyParams.chef,
     vault.address,
     strategyParams.unirouter,
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
+    strategyParams.outputToWantRoute,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -98,7 +99,7 @@ async function main() {
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
-  console.log("RewardPool:", strategyParams.rewardPool);
+  console.log("PoolId:", strategyParams.poolId);
 
   console.log();
   console.log("Running post deployment");
@@ -111,8 +112,8 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
+    await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+ // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 
   await Promise.all(verifyContractsPromises);
