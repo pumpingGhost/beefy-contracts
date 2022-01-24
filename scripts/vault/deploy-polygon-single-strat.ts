@@ -21,26 +21,26 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x8BEbd067b8F17699707B02e37956f846dfB0932A"); // TODO
-const ORARE = web3.utils.toChecksumAddress("0xFF2382Bd52efaceF02Cc895bcBFc4618608AA56F");
+const want = web3.utils.toChecksumAddress("0x369582d2010B6eD950B571F4101e3bB9b554876F"); // TODO
+const SAND = web3.utils.toChecksumAddress("0xBbba073C31bF03b8ACf7c28EF0738DeCF3695683");
 
 // TODO
 const vaultParams = {
-  mooName: "Moo QuickSwap ORARE-USDT",
-  mooSymbol: "mooQuickSwapORARE-USDT",
+  mooName: "Moo QuickSwap SAND-MATIC",
+  mooSymbol: "mooQuickSwapSAND-MATIC",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0xA50D6c54080e81C9948e4E8375C8F468478A99Df", // TODO
+  rewardPool: "0x411b772B9eb19a33E7af5fCD9B1629D2015DC886", // TODO
   unirouter: quickswap.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [QUICK, MATIC],
-  outputToLp0Route: [QUICK, MATIC, USDT], // TODO
-  outputToLp1Route: [QUICK, MATIC, USDT, ORARE], // TODO
+  outputToLp0Route: [QUICK, MATIC], // TODO
+  outputToLp1Route: [QUICK, MATIC, SAND], // TODO
 };
 
 const contractNames = {
