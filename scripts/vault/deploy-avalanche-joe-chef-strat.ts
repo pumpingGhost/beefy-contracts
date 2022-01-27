@@ -2,48 +2,55 @@ import hardhat, { ethers, web3 } from "hardhat";
 import { addressBook } from "blockchain-addressbook";
 import { predictAddresses } from "../../utils/predictAddresses";
 import { setCorrectCallFee } from "../../utils/setCorrectCallFee";
-import { setPendingRewardsFunctionName } from "../../utils/setPendingRewardsFunctionName";
 import { verifyContract } from "../../utils/verifyContract";
 import { BeefyChain } from "../../utils/beefyChain";
 
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { pancake, beefyfinance },
+  platforms: { joe, beefyfinance },
   tokens: {
-    BNB: { address: BNB },
-    CAKE: { address: CAKE },
+    PNG: { address: PNG },
+    MIM: { address: MIM },
+    AVAX: { address: AVAX },
+    USDCe: { address: USDCe },
+    DAIe: { address: DAIe },
+    TIME: { address: TIME },
+    SPELL: { address: SPELL },
+    XAVA: { address: XAVA },
+    JOE: { address: JOE },
   },
-} = addressBook.bsc;
+} = addressBook.avax;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x70531B39E2Bb4d8dA59E2Ce41a98eBA2990F8497");
-const ERTHA = web3.utils.toChecksumAddress("0x62823659d09F9F9D2222058878f89437425eB261");
+const want = web3.utils.toChecksumAddress("0x3fcD1d5450e63FA6af495A601E6EA1230f01c4E3"); // TODO
+const COOK = web3.utils.toChecksumAddress("0x637afeff75ca669fF92e4570B14D6399A658902f")
 
+// TODO
 const vaultParams = {
-  mooName: "Moo CakeV2 ERTHA-BNB",
-  mooSymbol: "mooCakeV2ERTHA-BNB",
+  mooName: "Moo Joe AVAX-COOK", 
+  mooSymbol: "mooJoeAVAX-COOK",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 506,
-  chef: pancake.masterchef,
-  unirouter: pancake.router,
+  poolId: 37, // TODO
+  chef: joe.masterchefV3,
+  unirouter: joe.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [CAKE, BNB],
-  outputToLp0Route: [CAKE, BNB, ERTHA],
-  outputToLp1Route: [CAKE, BNB],
-  pendingRewardsFunctionName: "pendingCake", // used for rewardsAvailable(), use correct function name from masterchef
+  outputToNativeRoute: [JOE, AVAX],
+  secondOutputToNativeRoute: [COOK, AVAX],
+  nativeToLp0Route: [AVAX, COOK], // TODO
+  nativeToLp1Route: [AVAX], // TODO
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyCommonChefLP",
+  strategy: "StrategyTraderJoeDualNonNativeLP",
 };
 
 async function main() {
@@ -86,8 +93,9 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
+    strategyParams.secondOutputToNativeRoute,
+    strategyParams.nativeToLp0Route,
+    strategyParams.nativeToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -110,8 +118,8 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-    await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
- // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
+ // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain); // prefer to do it manually
   console.log();
 
   await Promise.all(verifyContractsPromises);

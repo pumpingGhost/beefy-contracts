@@ -16,31 +16,32 @@ const {
     ETH: { address: ETH },
     USDC: { address: USDC },
     USDT: { address: USDT },
+    BNB: { address: BNB },
   },
 } = addressBook.polygon;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x369582d2010B6eD950B571F4101e3bB9b554876F"); // TODO
-const SAND = web3.utils.toChecksumAddress("0xBbba073C31bF03b8ACf7c28EF0738DeCF3695683");
+const want = web3.utils.toChecksumAddress("0x40A5Df3E37152d4DaF279e0450289Af76472b02e"); // TODO
+const BINANCE = web3.utils.toChecksumAddress("0x5c4b7CCBF908E64F32e12c6650ec0C96d717f03F");
 
 // TODO
 const vaultParams = {
-  mooName: "Moo QuickSwap SAND-MATIC",
-  mooSymbol: "mooQuickSwapSAND-MATIC",
+  mooName: "Moo QuickSwap BNB-USDC",
+  mooSymbol: "mooQuickSwapBNB-USDC",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0x411b772B9eb19a33E7af5fCD9B1629D2015DC886", // TODO
+  rewardPool: "0xCd7E62D9E2D209EcB22EC48A942b4db9503aB97B", // TODO
   unirouter: quickswap.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [QUICK, MATIC],
-  outputToLp0Route: [QUICK, MATIC], // TODO
-  outputToLp1Route: [QUICK, MATIC, SAND], // TODO
+  outputToLp0Route: [QUICK, MATIC, USDC], // TODO
+  outputToLp1Route: [QUICK, MATIC, USDC, BINANCE], // TODO
 };
 
 const contractNames = {
