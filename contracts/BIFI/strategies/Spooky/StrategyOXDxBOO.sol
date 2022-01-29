@@ -9,12 +9,13 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../../interfaces/common/IUniswapRouterETH.sol";
 import "../../interfaces/common/IUniswapV2Pair.sol";
 import "../../interfaces/common/IMasterChef.sol";
+import "../../interfaces/spooky/IXPool.sol";
 import "../Common/StratManager.sol";
 import "../Common/FeeManager.sol";
 import "../../utils/StringUtils.sol";
 import "../../utils/GasThrottler.sol";
 
-contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
+contract StrategyOXDxBOO is StratManager, FeeManager, GasThrottler {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -22,6 +23,7 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
     address public native;
     address public output;
     address public want;
+    address public unstakedWant;
 
     // Third party contracts
     address public chef;
@@ -33,14 +35,8 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
 
     // Routes
     address[] public outputToNativeRoute;
-    address[] public outputToWantRoute;
+    address[] public outputToUnstakedWantRoute;
 
-<<<<<<< HEAD
-    /**
-     * @dev Event that is fired each time someone harvests the strat.
-     */
-=======
->>>>>>> 294e8a1d5111ecdd4087bdc0f2270561cca79683
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);
     event Withdraw(uint256 tvl);
@@ -55,7 +51,7 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
         address _strategist,
         address _beefyFeeRecipient,
         address[] memory _outputToNativeRoute,
-        address[] memory _outputToWantRoute
+        address[] memory _outputToUnstakedWantRoute
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
         want = _want;
         poolId = _poolId;
@@ -63,11 +59,11 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
 
         output = _outputToNativeRoute[0];
         native = _outputToNativeRoute[_outputToNativeRoute.length - 1];
+        unstakedWant = _outputToUnstakedWantRoute[_outputToUnstakedWantRoute.length - 1];
         outputToNativeRoute = _outputToNativeRoute;
 
-        require(_outputToWantRoute[0] == output, "outputToWantRoute[0] != output");
-        require(_outputToWantRoute[_outputToWantRoute.length - 1] == want, "!want");
-        outputToWantRoute = _outputToWantRoute;
+        require(_outputToUnstakedWantRoute[0] == output, "outputToUnstakedWantRoute[0] != output");
+        outputToUnstakedWantRoute = _outputToUnstakedWantRoute;
 
         _giveAllowances();
     }
@@ -101,11 +97,8 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
             wantBal = wantBal.sub(withdrawalFeeAmount);
         }
 
-<<<<<<< HEAD
-=======
         IERC20(want).safeTransfer(vault, wantBal);
 
->>>>>>> 294e8a1d5111ecdd4087bdc0f2270561cca79683
         emit Withdraw(balanceOf());
     }
 
@@ -164,7 +157,13 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
     function swapRewards() internal {
         if (want != output) {
             uint256 outputBal = IERC20(output).balanceOf(address(this));
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(outputBal, 0, outputToWantRoute, address(this), now);
+            IUniswapRouterETH(unirouter).swapExactTokensForTokens(outputBal, 0, outputToUnstakedWantRoute, address(this), now);
+
+            uint256 balanceOfUnstakedWant = IERC20(unstakedWant).balanceOf(address(this));
+
+            if (balanceOfUnstakedWant > 0) {
+                IXPool(want).enter(balanceOfUnstakedWant);
+            }
         }
     }
 
@@ -264,23 +263,21 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
 
     function _giveAllowances() internal {
         IERC20(want).safeApprove(chef, uint256(-1));
+        IERC20(unstakedWant).safeApprove(want, uint256(-1));
         IERC20(output).safeApprove(unirouter, uint256(-1));
     }
 
     function _removeAllowances() internal {
         IERC20(want).safeApprove(chef, 0);
+        IERC20(unstakedWant).safeApprove(want, 0);
         IERC20(output).safeApprove(unirouter, 0);
     }
 
-<<<<<<< HEAD
-    function outputToNative() public view returns (address[] memory) {
-=======
     function outputToNative() external view returns (address[] memory) {
->>>>>>> 294e8a1d5111ecdd4087bdc0f2270561cca79683
         return outputToNativeRoute;
     }
 
-    function outputToWant() external view returns (address[] memory) {
-        return outputToWantRoute;
+    function outputToUnstakedWant() external view returns (address[] memory) {
+        return outputToUnstakedWantRoute;
     }
 }
