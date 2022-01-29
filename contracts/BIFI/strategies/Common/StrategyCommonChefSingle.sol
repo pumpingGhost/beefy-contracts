@@ -35,12 +35,6 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
     address[] public outputToNativeRoute;
     address[] public outputToWantRoute;
 
-<<<<<<< HEAD
-    /**
-     * @dev Event that is fired each time someone harvests the strat.
-     */
-=======
->>>>>>> 294e8a1d5111ecdd4087bdc0f2270561cca79683
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);
     event Withdraw(uint256 tvl);
@@ -101,11 +95,8 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
             wantBal = wantBal.sub(withdrawalFeeAmount);
         }
 
-<<<<<<< HEAD
-=======
         IERC20(want).safeTransfer(vault, wantBal);
 
->>>>>>> 294e8a1d5111ecdd4087bdc0f2270561cca79683
         emit Withdraw(balanceOf());
     }
 
@@ -272,11 +263,7 @@ contract StrategyCommonChefSingle is StratManager, FeeManager, GasThrottler {
         IERC20(output).safeApprove(unirouter, 0);
     }
 
-<<<<<<< HEAD
-    function outputToNative() public view returns (address[] memory) {
-=======
     function outputToNative() external view returns (address[] memory) {
->>>>>>> 294e8a1d5111ecdd4087bdc0f2270561cca79683
         return outputToNativeRoute;
     }
 
