@@ -24,27 +24,28 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x81034A38a124A3290DC226798f34c6645B153a02"); // TODO
-const DCAU = web3.utils.toChecksumAddress("0x100Cc3a819Dd3e8573fD2E46D1E66ee866068f30")
+const want = web3.utils.toChecksumAddress("0x3052a75dfD7A9D9B0F81E510E01d3Fe80A9e7ec7"); // TODO
+const EGG = web3.utils.toChecksumAddress("0x7761E2338B35bCEB6BdA6ce477EF012bde7aE611")
+const FEED = web3.utils.toChecksumAddress("0xab592d197ACc575D16C3346f4EB70C703F308D1E")
 
 // TODO
 const vaultParams = {
-  mooName: "Moo Joe AVAX-DCAU", 
-  mooSymbol: "mooJoeAVAX-DCAU",
+  mooName: "Moo Joe EGG-AVAX", 
+  mooSymbol: "mooJoeEGG-AVAX",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 40, // TODO
+  poolId: 32, // TODO
   chef: joe.masterchefV3,
   unirouter: joe.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [JOE, AVAX],
-  secondOutputToNativeRoute: [DCAU, AVAX],
-  nativeToLp0Route: [AVAX, DCAU], // TODO
+  secondOutputToNativeRoute: [FEED, AVAX],
+  nativeToLp0Route: [AVAX, EGG], // TODO
   nativeToLp1Route: [AVAX], // TODO
 };
 
