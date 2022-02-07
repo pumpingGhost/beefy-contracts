@@ -23,28 +23,35 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x4a2cB99e8d91f82Cf10Fb97D43745A1f23e47caA"); // TODO
-const ROCO = web3.utils.toChecksumAddress("0xb2a85C5ECea99187A977aC34303b80AcbDdFa208")
+const want = web3.utils.toChecksumAddress("0xdeaBb6e80141F5E557EcBDD7e9580F37D7BBc371"); // TODO
+const UST = web3.utils.toChecksumAddress("0x260Bbf5698121EB85e7a74f2E45E16Ce762EbE11");
+const LUNA = web3.utils.toChecksumAddress("0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb");
 
 // TODO
 const vaultParams = {
-  mooName: "Moo Pangolin ROCO-AVAX", 
-  mooSymbol: "mooPangolinROCO-AVAX",
+  mooName: "Moo PangolinV2 UST-AVAX", 
+  mooSymbol: "mooPangolinV2UST-AVAX",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 17, // TODO
+  poolId: 74, // TODO
   chef: pangolin.minichef,
   unirouter: pangolin.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [PNG, AVAX],
-  outputToLp0Route: [PNG, AVAX, ROCO], // TODO
+  outputToLp0Route: [PNG, AVAX, UST], // TODO
   outputToLp1Route: [PNG, AVAX], // TODO
+  // rewardsToOutputRoute: [LOOT, AVAX, PNG] //TODO
 };
+// luna -> avax -> png: 
+// [0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb, 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7, 0x60781C2586D68229fde47564546784ab3fACA982]
+
+// avax -> png: 
+// [0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7, 0x60781C2586D68229fde47564546784ab3fACA982]
 
 const contractNames = {
   vault: "BeefyVaultV6",

@@ -2,50 +2,61 @@ import hardhat, { ethers, web3 } from "hardhat";
 import { addressBook } from "blockchain-addressbook";
 import { predictAddresses } from "../../utils/predictAddresses";
 import { setCorrectCallFee } from "../../utils/setCorrectCallFee";
-import { setPendingRewardsFunctionName } from "../../utils/setPendingRewardsFunctionName";
 import { verifyContract } from "../../utils/verifyContract";
 import { BeefyChain } from "../../utils/beefyChain";
 
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { quickswap, beefyfinance },
+  platforms: { pangolin, beefyfinance },
   tokens: {
-    MATIC: { address: MATIC },
-    QUICK: { address: QUICK },
-    TEL: { address: TEL },
-    ETH: { address: ETH }
+    PNG: { address: PNG },
+    MIM: { address: MIM },
+    AVAX: { address: AVAX },
+    USDCe: { address: USDCe },
+    DAIe: { address: DAIe },
+    TIME: { address: TIME },
+    SPELL: { address: SPELL },
+    XAVA: { address: XAVA },
+    USDC: { address: USDC },
   },
-} = addressBook.polygon;
+} = addressBook.avax;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xE88e24F49338f974B528AcE10350Ac4576c5c8A1"); // LP addr
-const FODL = web3.utils.toChecksumAddress("0x5314bA045a459f63906Aa7C76d9F337DcB7d6995");
-// const DQUICK = web3.utils.toChecksumAddress("0xf28164a485b0b2c90639e47b0f377b4a438a16b1")
+const want = web3.utils.toChecksumAddress("0x3c0ECf5F430bbE6B16A8911CB25d898Ef20805cF"); // TODO
+const UST = web3.utils.toChecksumAddress("0x260Bbf5698121EB85e7a74f2E45E16Ce762EbE11");
+const LUNA = web3.utils.toChecksumAddress("0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb");
 
+// TODO
 const vaultParams = {
-  mooName: "Moo QuickSwap QUICK-TEL",
-  mooSymbol: "mooQuickSwapQUICK-TEL",
+  mooName: "Moo PangolinV2 UST-USDC", 
+  mooSymbol: "mooPangolinV2UST-USDC",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0xF8bdC7bC282847EeB5d4291ec79172B48526e9dE",
-  unirouter: quickswap.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
+  poolId: 75, // TODO
+  chef: pangolin.minichef,
+  unirouter: pangolin.router,
+  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  output0ToNativeRoute: [QUICK, MATIC], // ["0x831753DD7087CaC61aB5644b308642cc1c33Dc13", "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"]
-  output1ToNativeRoute: [TEL, ETH, MATIC],
-  nativeToLp0Route: [MATIC, QUICK],
-  nativeToLp1Route: [MATIC, ETH, TEL],
+  outputToNativeRoute: [PNG, AVAX],
+  outputToLp0Route: [PNG, AVAX, UST], // TODO
+  outputToLp1Route: [PNG, AVAX, USDCe, USDC], // TODO
+  // rewardsToOutputRoute: [LOOT, AVAX, PNG] //TODO
 };
+// luna -> avax -> png: 
+// [0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb, 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7, 0x60781C2586D68229fde47564546784ab3fACA982]
+
+// avax -> png: 
+// [0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7, 0x60781C2586D68229fde47564546784ab3fACA982]
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyQuickswapDualRewardLP",
+  strategy: "StrategyPangolinMiniChefLP",
 };
 
 async function main() {
@@ -80,16 +91,16 @@ async function main() {
 
   const strategyConstructorArguments = [
     strategyParams.want,
-    strategyParams.rewardPool,
+    strategyParams.poolId,
+    strategyParams.chef,
     vault.address,
     strategyParams.unirouter,
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
-    strategyParams.output0ToNativeRoute,
-    strategyParams.output1ToNativeRoute,
-    strategyParams.nativeToLp0Route,
-    strategyParams.nativeToLp1Route,
+    strategyParams.outputToNativeRoute,
+    strategyParams.outputToLp0Route,
+    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -99,7 +110,7 @@ async function main() {
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
-  console.log("RewardPool:", strategyParams.rewardPool);
+  console.log("PoolId:", strategyParams.poolId);
 
   console.log();
   console.log("Running post deployment");
@@ -112,8 +123,8 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
+ // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain); // prefer to do it manually
   console.log();
 
   await Promise.all(verifyContractsPromises);

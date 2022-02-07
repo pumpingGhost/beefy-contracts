@@ -9,43 +9,39 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { quickswap, beefyfinance },
+  platforms: { fusefi, beefyfinance },
   tokens: {
-    MATIC: { address: MATIC },
-    QUICK: { address: QUICK },
-    TEL: { address: TEL },
-    ETH: { address: ETH }
+    FUSE: { address: FUSE },
   },
-} = addressBook.polygon;
+} = addressBook.fuse;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xE88e24F49338f974B528AcE10350Ac4576c5c8A1"); // LP addr
-const FODL = web3.utils.toChecksumAddress("0x5314bA045a459f63906Aa7C76d9F337DcB7d6995");
-// const DQUICK = web3.utils.toChecksumAddress("0xf28164a485b0b2c90639e47b0f377b4a438a16b1")
+const want = web3.utils.toChecksumAddress("0x44cB3a602AE57b60A5dc808a44544Ab9ec8dDB36");
+const UST = web3.utils.toChecksumAddress("0x0D58a44be3dCA0aB449965dcc2c46932547Fea2f");
+const LUNA = web3.utils.toChecksumAddress("0x588e24DEd8f850b14BB2e62E9c50A7Cd5Ee13Da9");
 
 const vaultParams = {
-  mooName: "Moo QuickSwap QUICK-TEL",
-  mooSymbol: "mooQuickSwapQUICK-TEL",
+  mooName: "Moo Voltage LUNA-UST",
+  mooSymbol: "mooVoltageLUNA-UST",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0xF8bdC7bC282847EeB5d4291ec79172B48526e9dE",
-  unirouter: quickswap.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
+  rewardPool: "0xE25d7A32903e29F5909d461cD89729aF6f2c9399",
+  unirouter: fusefi.router,
+  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  output0ToNativeRoute: [QUICK, MATIC], // ["0x831753DD7087CaC61aB5644b308642cc1c33Dc13", "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"]
-  output1ToNativeRoute: [TEL, ETH, MATIC],
-  nativeToLp0Route: [MATIC, QUICK],
-  nativeToLp1Route: [MATIC, ETH, TEL],
+  outputToNativeRoute: [FUSE],
+  outputToLp0Route: [FUSE, UST],
+  outputToLp1Route: [FUSE, UST, LUNA],
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyQuickswapDualRewardLP",
+  strategy: "StrategyFuseRewardPoolLP",
 };
 
 async function main() {
@@ -86,10 +82,9 @@ async function main() {
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
-    strategyParams.output0ToNativeRoute,
-    strategyParams.output1ToNativeRoute,
-    strategyParams.nativeToLp0Route,
-    strategyParams.nativeToLp1Route,
+    strategyParams.outputToNativeRoute,
+    strategyParams.outputToLp0Route,
+    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -112,8 +107,8 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
+    // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+ // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 
   await Promise.all(verifyContractsPromises);
