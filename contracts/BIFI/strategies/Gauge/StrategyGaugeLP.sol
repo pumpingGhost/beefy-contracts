@@ -8,25 +8,28 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../../interfaces/common/IUniswapRouterETH.sol";
 import "../../interfaces/common/IUniswapV2Pair.sol";
-import "../../interfaces/common/IMultiRewardPool.sol";
+import "../../interfaces/common/gauge/IGaugeStaker.sol";
+import "../../interfaces/common/gauge/IGaugeProxy.sol";
 import "../Common/StratManager.sol";
 import "../Common/FeeManager.sol";
 import "../../utils/GasThrottler.sol";
 
-contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottler {
+contract StrategyGaugeLP is StratManager, FeeManager, GasThrottler {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
     // Tokens used
     address public native;
     address public output;
-    address public secondOutput;
     address public want;
     address public lpToken0;
     address public lpToken1;
 
+    // Beefy Gauge Staker
+    address public gaugeStaker;
+
     // Third party contracts
-    address public rewardPool;
+    address public gauge;
 
     bool public harvestOnDeposit;
     uint256 public lastHarvest;
@@ -35,7 +38,6 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
     address[] public outputToNativeRoute;
     address[] public outputToLp0Route;
     address[] public outputToLp1Route;
-    address[] public secondOutputToOutputRoute;
 
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);
@@ -43,28 +45,25 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
 
     constructor(
         address _want,
-        address _rewardPool,
+        address _gauge,
+        address _gaugeStaker,
         address _vault,
         address _unirouter,
         address _keeper,
         address _strategist,
         address _beefyFeeRecipient,
         address[] memory _outputToNativeRoute,
-        address[] memory _secondOutputToOutputRoute,
         address[] memory _outputToLp0Route,
         address[] memory _outputToLp1Route
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
         want = _want;
-        rewardPool = _rewardPool;
+        gauge = _gauge;
+        gaugeStaker = _gaugeStaker;
 
         output = _outputToNativeRoute[0];
         native = _outputToNativeRoute[_outputToNativeRoute.length - 1];
         outputToNativeRoute = _outputToNativeRoute;
 
-        secondOutput = _secondOutputToOutputRoute[0];
-        require(_secondOutputToOutputRoute[_secondOutputToOutputRoute.length - 1] == output, "secondOutputToOutputRoute[last] != output");
-        secondOutputToOutputRoute = _secondOutputToOutputRoute;
-        
         // setup lp routing
         lpToken0 = IUniswapV2Pair(want).token0();
         require(_outputToLp0Route[0] == output, "outputToLp0Route[0] != output");
@@ -81,10 +80,10 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
 
     // puts the funds to work
     function deposit() public whenNotPaused {
-        uint256 wantBal = balanceOfWant();
+        uint256 wantBal = IERC20(want).balanceOf(address(this));
 
         if (wantBal > 0) {
-            IMultiRewardPool(rewardPool).stake(wantBal);
+            IGaugeStaker(gaugeStaker).deposit(gauge, wantBal);
             emit Deposit(balanceOf());
         }
     }
@@ -92,11 +91,11 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
     function withdraw(uint256 _amount) external {
         require(msg.sender == vault, "!vault");
 
-        uint256 wantBal = balanceOfWant();
+        uint256 wantBal = IERC20(want).balanceOf(address(this));
 
         if (wantBal < _amount) {
-            IMultiRewardPool(rewardPool).withdraw(_amount.sub(wantBal));
-            wantBal = balanceOfWant();
+            IGaugeStaker(gaugeStaker).withdraw(gauge, _amount.sub(wantBal));
+            wantBal = IERC20(want).balanceOf(address(this));
         }
 
         if (wantBal > _amount) {
@@ -134,10 +133,9 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
 
     // compounds earnings and charges performance fee
     function _harvest(address callFeeRecipient) internal whenNotPaused {
-        IMultiRewardPool(rewardPool).getReward();
+        IGaugeStaker(gaugeStaker).claimGaugeReward(gauge);
         uint256 outputBal = IERC20(output).balanceOf(address(this));
-        uint256 secondOutputBal = IERC20(secondOutput).balanceOf(address(this));
-        if (outputBal > 0 || secondOutputBal > 0) {
+        if (outputBal > 0) {
             chargeFees(callFeeRecipient);
             addLiquidity();
             uint256 wantHarvested = balanceOfWant();
@@ -150,11 +148,6 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
 
     // performance fees
     function chargeFees(address callFeeRecipient) internal {
-        uint256 toOutput = IERC20(secondOutput).balanceOf(address(this));
-        if (toOutput > 0) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(toOutput, 0, secondOutputToOutputRoute, address(this), now);
-        }
-        
         uint256 toNative = IERC20(output).balanceOf(address(this)).mul(45).div(1000);
         IUniswapRouterETH(unirouter).swapExactTokensForTokens(toNative, 0, outputToNativeRoute, address(this), now);
 
@@ -199,23 +192,27 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
 
     // it calculates how much 'want' the strategy has working in the farm.
     function balanceOfPool() public view returns (uint256) {
-        return IMultiRewardPool(rewardPool).balanceOf(address(this));
+        uint256 _amount = IGaugeProxy(gauge).balanceOf(gaugeStaker);
+        return _amount;
     }
 
     // returns rewards unharvested
-    function rewardsAvailable() public view returns (uint256, uint256) {
-        uint256[] memory rewards = IMultiRewardPool(rewardPool).earned(address(this));
-        return (rewards[0], rewards[1]);
+    function rewardsAvailable() public view returns (uint256) {
+        return IGaugeProxy(gauge).earned(gaugeStaker);
     }
 
     // native reward amount for calling harvest
     function callReward() public view returns (uint256) {
-        (uint256 outputBal, uint256 secondOutputBal) = rewardsAvailable();
+        uint256 outputBal = rewardsAvailable();
         uint256 nativeOut;
-        uint256[] memory amountOutFromSecond = IUniswapRouterETH(unirouter).getAmountsOut(secondOutputBal, secondOutputToOutputRoute);
-        outputBal += amountOutFromSecond[amountOutFromSecond.length -1];
-        uint256[] memory amountOut = IUniswapRouterETH(unirouter).getAmountsOut(outputBal, outputToNativeRoute);
-        nativeOut = amountOut[amountOut.length -1];
+        if (outputBal > 0) {
+            try IUniswapRouterETH(unirouter).getAmountsOut(outputBal, outputToNativeRoute)
+                returns (uint256[] memory amountOut) 
+            {
+                nativeOut = amountOut[amountOut.length -1];
+            }
+            catch {}
+        }
 
         return nativeOut.mul(45).div(1000).mul(callFee).div(MAX_FEE);
     }
@@ -238,16 +235,17 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
     function retireStrat() external {
         require(msg.sender == vault, "!vault");
 
-        IMultiRewardPool(rewardPool).withdraw(balanceOfPool());
+        IGaugeStaker(gaugeStaker).withdrawAll(gauge);
+        IGaugeStaker(gaugeStaker).upgradeStrategy(gauge);
 
-        uint256 wantBal = balanceOfWant();
+        uint256 wantBal = IERC20(want).balanceOf(address(this));
         IERC20(want).transfer(vault, wantBal);
     }
 
     // pauses deposits and withdraws all funds from third party systems.
     function panic() public onlyManager {
         pause();
-        IMultiRewardPool(rewardPool).withdraw(balanceOfPool());
+        IGaugeStaker(gaugeStaker).withdrawAll(gauge);
     }
 
     function pause() public onlyManager {
@@ -264,26 +262,9 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
         deposit();
     }
 
-    function outputToLp0() public view returns (address[] memory) {
-        return outputToLp0Route;
-    }
-
-    function outputToLp1() public view returns (address[] memory) {
-        return outputToLp1Route;
-    }
-
-    function outputToNative() public view returns (address[] memory) {
-        return outputToNativeRoute;
-    }
-
-    function secondOutputToOutput() public view returns (address[] memory) {
-        return secondOutputToOutputRoute;
-    }
-
     function _giveAllowances() internal {
-        IERC20(want).safeApprove(rewardPool, uint256(-1));
+        IERC20(want).safeApprove(gaugeStaker, uint256(-1));
         IERC20(output).safeApprove(unirouter, uint256(-1));
-        IERC20(secondOutput).safeApprove(unirouter, uint256(-1));
 
         IERC20(lpToken0).safeApprove(unirouter, 0);
         IERC20(lpToken0).safeApprove(unirouter, uint256(-1));
@@ -293,10 +274,21 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
     }
 
     function _removeAllowances() internal {
-        IERC20(want).safeApprove(rewardPool, 0);
+        IERC20(want).safeApprove(gaugeStaker, 0);
         IERC20(output).safeApprove(unirouter, 0);
-        IERC20(secondOutput).safeApprove(unirouter, 0);
         IERC20(lpToken0).safeApprove(unirouter, 0);
         IERC20(lpToken1).safeApprove(unirouter, 0);
+    }
+
+    function outputToNative() external view returns (address[] memory) {
+        return outputToNativeRoute;
+    }
+
+    function outputToLp0() external view returns (address[] memory) {
+        return outputToLp0Route;
+    }
+
+    function outputToLp1() external view returns (address[] memory) {
+        return outputToLp1Route;
     }
 }

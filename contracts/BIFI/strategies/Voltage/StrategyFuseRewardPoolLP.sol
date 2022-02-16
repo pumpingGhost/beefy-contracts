@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -8,19 +9,18 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../../interfaces/common/IUniswapRouterETH.sol";
 import "../../interfaces/common/IUniswapV2Pair.sol";
-import "../../interfaces/common/IMultiRewardPool.sol";
+import "../../interfaces/common/IMultiRewards.sol";
 import "../Common/StratManager.sol";
 import "../Common/FeeManager.sol";
-import "../../utils/GasThrottler.sol";
+import "../../utils/StringUtils.sol";
 
-contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottler {
+contract StrategyFuseRewardPoolLP is StratManager, FeeManager {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
     // Tokens used
     address public native;
     address public output;
-    address public secondOutput;
     address public want;
     address public lpToken0;
     address public lpToken1;
@@ -28,15 +28,22 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
     // Third party contracts
     address public rewardPool;
 
-    bool public harvestOnDeposit;
-    uint256 public lastHarvest;
-
     // Routes
     address[] public outputToNativeRoute;
     address[] public outputToLp0Route;
     address[] public outputToLp1Route;
-    address[] public secondOutputToOutputRoute;
+    address[][] public rewardToOutputRoute;
 
+    bool public harvestOnDeposit;
+    uint256 public lastHarvest;
+
+    // View
+    string[] public outputToLp0SymbolRoute;
+    string[] public outputToLp1SymbolRoute;
+
+    /**
+     * @dev Event that is fired each time someone harvests the strat.
+     */
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);
     event Withdraw(uint256 tvl);
@@ -50,7 +57,6 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
         address _strategist,
         address _beefyFeeRecipient,
         address[] memory _outputToNativeRoute,
-        address[] memory _secondOutputToOutputRoute,
         address[] memory _outputToLp0Route,
         address[] memory _outputToLp1Route
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
@@ -60,10 +66,6 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
         output = _outputToNativeRoute[0];
         native = _outputToNativeRoute[_outputToNativeRoute.length - 1];
         outputToNativeRoute = _outputToNativeRoute;
-
-        secondOutput = _secondOutputToOutputRoute[0];
-        require(_secondOutputToOutputRoute[_secondOutputToOutputRoute.length - 1] == output, "secondOutputToOutputRoute[last] != output");
-        secondOutputToOutputRoute = _secondOutputToOutputRoute;
         
         // setup lp routing
         lpToken0 = IUniswapV2Pair(want).token0();
@@ -84,7 +86,7 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
         uint256 wantBal = balanceOfWant();
 
         if (wantBal > 0) {
-            IMultiRewardPool(rewardPool).stake(wantBal);
+            IMultiRewards(rewardPool).stake(wantBal);
             emit Deposit(balanceOf());
         }
     }
@@ -95,7 +97,7 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
         uint256 wantBal = balanceOfWant();
 
         if (wantBal < _amount) {
-            IMultiRewardPool(rewardPool).withdraw(_amount.sub(wantBal));
+            IMultiRewards(rewardPool).withdraw(_amount.sub(wantBal));
             wantBal = balanceOfWant();
         }
 
@@ -103,12 +105,12 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
             wantBal = _amount;
         }
 
-        if (tx.origin != owner() && !paused()) {
+        if (tx.origin == owner() || paused()) {
+            IERC20(want).safeTransfer(vault, wantBal);
+        } else {
             uint256 withdrawalFeeAmount = wantBal.mul(withdrawalFee).div(WITHDRAWAL_MAX);
-            wantBal = wantBal.sub(withdrawalFeeAmount);
+            IERC20(want).safeTransfer(vault, wantBal.sub(withdrawalFeeAmount));
         }
-
-        IERC20(want).safeTransfer(vault, wantBal);
 
         emit Withdraw(balanceOf());
     }
@@ -120,11 +122,11 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
         }
     }
 
-    function harvest() external gasThrottle virtual {
+    function harvest() external virtual {
         _harvest(tx.origin);
     }
 
-    function harvest(address callFeeRecipient) external gasThrottle virtual {
+    function harvest(address callFeeRecipient) external virtual {
         _harvest(callFeeRecipient);
     }
 
@@ -134,15 +136,14 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
 
     // compounds earnings and charges performance fee
     function _harvest(address callFeeRecipient) internal whenNotPaused {
-        IMultiRewardPool(rewardPool).getReward();
+        IMultiRewards(rewardPool).getReward();
         uint256 outputBal = IERC20(output).balanceOf(address(this));
-        uint256 secondOutputBal = IERC20(secondOutput).balanceOf(address(this));
-        if (outputBal > 0 || secondOutputBal > 0) {
+        if (outputBal > 0) {
             chargeFees(callFeeRecipient);
             addLiquidity();
             uint256 wantHarvested = balanceOfWant();
             deposit();
-
+            
             lastHarvest = block.timestamp;
             emit StratHarvest(msg.sender, wantHarvested, balanceOf());
         }
@@ -150,15 +151,20 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
 
     // performance fees
     function chargeFees(address callFeeRecipient) internal {
-        uint256 toOutput = IERC20(secondOutput).balanceOf(address(this));
-        if (toOutput > 0) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(toOutput, 0, secondOutputToOutputRoute, address(this), now);
+        if (rewardToOutputRoute.length != 0) {
+            for (uint i; i < rewardToOutputRoute.length; i++) {
+                uint256 rewardBal = IERC20(rewardToOutputRoute[i][0]).balanceOf(address(this));
+                if (rewardBal > 0) {
+                    IUniswapRouterETH(unirouter).swapExactTokensForTokens(rewardBal, 0, rewardToOutputRoute[i], address(this), now);
+                }
+            }
         }
-        
-        uint256 toNative = IERC20(output).balanceOf(address(this)).mul(45).div(1000);
-        IUniswapRouterETH(unirouter).swapExactTokensForTokens(toNative, 0, outputToNativeRoute, address(this), now);
 
-        uint256 nativeBal = IERC20(native).balanceOf(address(this));
+        uint256 nativeBal = IERC20(output).balanceOf(address(this)).mul(45).div(1000);
+        if (output != native) {
+            IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, outputToNativeRoute, address(this), now);
+            nativeBal = IERC20(native).balanceOf(address(this));
+        }
 
         uint256 callFeeAmount = nativeBal.mul(callFee).div(MAX_FEE);
         IERC20(native).safeTransfer(callFeeRecipient, callFeeAmount);
@@ -199,25 +205,40 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
 
     // it calculates how much 'want' the strategy has working in the farm.
     function balanceOfPool() public view returns (uint256) {
-        return IMultiRewardPool(rewardPool).balanceOf(address(this));
+        return IMultiRewards(rewardPool).balanceOf(address(this));
     }
 
-    // returns rewards unharvested
-    function rewardsAvailable() public view returns (uint256, uint256) {
-        uint256[] memory rewards = IMultiRewardPool(rewardPool).earned(address(this));
-        return (rewards[0], rewards[1]);
+     // returns rewards unharvested
+    function rewardsAvailable() public view returns (uint256 nativeBal) {
+       nativeBal = IMultiRewards(rewardPool).earned(address(this), native);
+
+       if (rewardToOutputRoute.length != 0) {
+            for (uint i; i < rewardToOutputRoute.length; i++) {
+                try IMultiRewards(rewardPool).earned(address(this), rewardToOutputRoute[i][0])
+                returns(uint256 initialAmountOut) {
+                    uint256 outputBal = initialAmountOut;
+                    uint256[] memory finalAmountOut = IUniswapRouterETH(unirouter).getAmountsOut(outputBal, rewardToOutputRoute[i]);
+                    nativeBal += finalAmountOut[finalAmountOut.length - 1];
+                } catch {}
+            }
+        }
     }
 
     // native reward amount for calling harvest
     function callReward() public view returns (uint256) {
-        (uint256 outputBal, uint256 secondOutputBal) = rewardsAvailable();
-        uint256 nativeOut;
-        uint256[] memory amountOutFromSecond = IUniswapRouterETH(unirouter).getAmountsOut(secondOutputBal, secondOutputToOutputRoute);
-        outputBal += amountOutFromSecond[amountOutFromSecond.length -1];
-        uint256[] memory amountOut = IUniswapRouterETH(unirouter).getAmountsOut(outputBal, outputToNativeRoute);
-        nativeOut = amountOut[amountOut.length -1];
+        uint256 nativeOut = rewardsAvailable();
 
         return nativeOut.mul(45).div(1000).mul(callFee).div(MAX_FEE);
+    }
+
+    // called as part of strat migration. Sends all the available funds back to the vault.
+    function retireStrat() external {
+        require(msg.sender == vault, "!vault");
+
+        IMultiRewards(rewardPool).withdraw(balanceOfPool());
+
+        uint256 wantBal = balanceOfWant();
+        IERC20(want).transfer(vault, wantBal);
     }
 
     function setHarvestOnDeposit(bool _harvestOnDeposit) external onlyManager {
@@ -230,24 +251,10 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
         }
     }
 
-    function setShouldGasThrottle(bool _shouldGasThrottle) external onlyManager {
-        shouldGasThrottle = _shouldGasThrottle;
-    }
-
-    // called as part of strat migration. Sends all the available funds back to the vault.
-    function retireStrat() external {
-        require(msg.sender == vault, "!vault");
-
-        IMultiRewardPool(rewardPool).withdraw(balanceOfPool());
-
-        uint256 wantBal = balanceOfWant();
-        IERC20(want).transfer(vault, wantBal);
-    }
-
     // pauses deposits and withdraws all funds from third party systems.
     function panic() public onlyManager {
         pause();
-        IMultiRewardPool(rewardPool).withdraw(balanceOfPool());
+        IMultiRewards(rewardPool).withdraw(balanceOfPool());
     }
 
     function pause() public onlyManager {
@@ -264,39 +271,65 @@ contract StrategyCommonMultiRewardPoolLP is StratManager, FeeManager, GasThrottl
         deposit();
     }
 
-    function outputToLp0() public view returns (address[] memory) {
-        return outputToLp0Route;
-    }
-
-    function outputToLp1() public view returns (address[] memory) {
-        return outputToLp1Route;
-    }
-
-    function outputToNative() public view returns (address[] memory) {
-        return outputToNativeRoute;
-    }
-
-    function secondOutputToOutput() public view returns (address[] memory) {
-        return secondOutputToOutputRoute;
-    }
-
     function _giveAllowances() internal {
         IERC20(want).safeApprove(rewardPool, uint256(-1));
         IERC20(output).safeApprove(unirouter, uint256(-1));
-        IERC20(secondOutput).safeApprove(unirouter, uint256(-1));
 
         IERC20(lpToken0).safeApprove(unirouter, 0);
         IERC20(lpToken0).safeApprove(unirouter, uint256(-1));
 
         IERC20(lpToken1).safeApprove(unirouter, 0);
         IERC20(lpToken1).safeApprove(unirouter, uint256(-1));
+
+        if (rewardToOutputRoute.length != 0) {
+            for (uint i; i < rewardToOutputRoute.length; i++) {
+                IERC20(rewardToOutputRoute[i][0]).safeApprove(unirouter, 0);
+                IERC20(rewardToOutputRoute[i][0]).safeApprove(unirouter, uint256(-1));
+            }
+        }
     }
 
     function _removeAllowances() internal {
         IERC20(want).safeApprove(rewardPool, 0);
         IERC20(output).safeApprove(unirouter, 0);
-        IERC20(secondOutput).safeApprove(unirouter, 0);
         IERC20(lpToken0).safeApprove(unirouter, 0);
         IERC20(lpToken1).safeApprove(unirouter, 0);
+
+        if (rewardToOutputRoute.length != 0) {
+            for (uint i; i < rewardToOutputRoute.length; i++) {
+                IERC20(rewardToOutputRoute[i][0]).safeApprove(unirouter, 0);
+            }
+        }
+    }
+
+    function addRewardRoute(address[] memory _rewardToOutputRoute) external onlyOwner {
+        require(_rewardToOutputRoute[_rewardToOutputRoute.length -1] == output, '!output');
+        IERC20(_rewardToOutputRoute[0]).safeApprove(unirouter, 0);
+        IERC20(_rewardToOutputRoute[0]).safeApprove(unirouter, uint256(-1));
+        rewardToOutputRoute.push(_rewardToOutputRoute);
+    }
+
+    function removeLastRewardRoute() external onlyManager {
+        address reward = rewardToOutputRoute[rewardToOutputRoute.length - 1][0];
+        if (reward != lpToken0 && reward != lpToken1) {
+            IERC20(reward).safeApprove(unirouter, 0);
+        }
+        rewardToOutputRoute.pop();
+    }
+
+    function outputToNative() external view returns (address[] memory) {
+        return outputToNativeRoute;
+    }
+
+    function outputToLp0() external view returns (address[] memory) {
+        return outputToLp0Route;
+    }
+
+    function outputToLp1() external view returns (address[] memory) {
+        return outputToLp1Route;
+    }
+
+    function rewardToOutput() external view returns (address[][] memory) {
+        return rewardToOutputRoute;
     }
 }
