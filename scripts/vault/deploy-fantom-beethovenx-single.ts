@@ -15,26 +15,28 @@ const {
     },
 } = addressBook.fantom;
 
-const shouldVerifyOnEtherscan = true;
+const shouldVerifyOnEtherscan = false;
 
 // TODO
 const vaultParams = {
-    mooName: "Moo Beet Paint It Black",
-    mooSymbol: "mooBeetPaintItBlack",
+    mooName: "Moo Beet Beardhemian Brushsody",
+    mooSymbol: "mooBeetBeardhemianBrushsody",
     delay: 21600,
 };
 
 const strategyParams = {
     // TODO: wantPoolId(hex), nativeSwapPoolId, inputSwapPoolId
-    balancerPoolIds: ["0x7ca132d9e8c420b84578a6618f10b2354551305800010000000000000000002b", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019"],
-    chefPoolId: 14, // TODO
+    balancerPoolIds: ["0x8fdd16a23aebe95b928f1863760618e9ec29e72d000100000000000000000166", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019"],
+    chefPoolId: 45, // TODO
     chef: "0x8166994d9ebBe5829EC86Bd81258149B87faCfd3",
-    input: BEETS, // TODO: choose either FTM, UDSC or BEETS as input token(You can provide the full amount in the same currency, no need for equal shares between the tokens)
+    input: FTM, // TODO: choose either FTM, UDSC or BEETS as input token(You can provide the full amount in the same currency, no need for equal shares between the tokens)
     unirouter: "0x20dd72Ed959b6147912C2e529F0a0C651c33c9ce", // Beethoven master vault
     keeper: beefyfinance.keeper,
     strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E",
     beefyFeeRecipient: beefyfinance.beefyFeeRecipient
 };
+
+// ["0xa1c5698a042638b6220e336ed9cfafb499560c200002000000000000000001b6", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019", "0x03c6b3f09d2504606936b1a4decefad204687890000200000000000000000015"]
 
 const contractNames = {
     vault: "BeefyVaultV6",
@@ -60,10 +62,12 @@ async function main() {
 
     console.log("Deploying:", vaultParams.mooName);
 
-    const predictedAddresses = await predictAddresses({ creator: deployer.address });
+    //const predictedAddresses = await predictAddresses({ creator: deployer.address });
+    
+    const predeployedStrategy = web3.utils.toChecksumAddress("0x72A6F8E2510B9332Eaf744FEb1F7c19E3aCB2201");
 
     const vaultConstructorArguments = [
-        predictedAddresses.strategy,
+        predeployedStrategy,
         vaultParams.mooName,
         vaultParams.mooSymbol,
         vaultParams.delay,
@@ -82,13 +86,12 @@ async function main() {
         strategyParams.strategist,
         strategyParams.beefyFeeRecipient,
     ];
-    const strategy = await Strategy.deploy(...strategyConstructorArguments);
-    await strategy.deployed();
+    // const strategy = await Strategy.deploy(...strategyConstructorArguments);
+    // await strategy.deployed();
 
     // add this info to PR
-    console.log();
     console.log("Vault:", vault.address);
-    console.log("Strategy:", strategy.address);
+    console.log("Strategy:", predeployedStrategy);
     console.log("ChefPoolId:", strategyParams.chefPoolId);
     console.log("WantPoolId:", strategyParams.balancerPoolIds[0]);
 
@@ -100,7 +103,7 @@ async function main() {
         // skip await as this is a long running operation, and you can do other stuff to prepare vault while this finishes
         verifyContractsPromises.push(
             verifyContract(vault.address, vaultConstructorArguments),
-            verifyContract(strategy.address, strategyConstructorArguments)
+            // verifyContract(strategy.address, strategyConstructorArguments)
         );
     }
     // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
@@ -111,7 +114,7 @@ async function main() {
 
     if (hardhat.network.name === "bsc") {
         await registerSubsidy(vault.address, deployer);
-        await registerSubsidy(strategy.address, deployer);
+        // await registerSubsidy(strategy.address, deployer);
     }
 }
 
