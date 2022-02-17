@@ -14,33 +14,33 @@ const {
     MATIC: { address: MATIC },
     QUICK: { address: QUICK },
     TEL: { address: TEL },
-    ETH: { address: ETH }
+    ETH: { address: ETH },
   },
 } = addressBook.polygon;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xE88e24F49338f974B528AcE10350Ac4576c5c8A1"); // LP addr
-const FODL = web3.utils.toChecksumAddress("0x5314bA045a459f63906Aa7C76d9F337DcB7d6995");
+const want = web3.utils.toChecksumAddress("0x7E02A82a9F2b96eE2836c5C64c44e0aB13020f4b"); // LP addr
+const BICO = web3.utils.toChecksumAddress("0x91c89A94567980f0e9723b487b0beD586eE96aa7");
 // const DQUICK = web3.utils.toChecksumAddress("0xf28164a485b0b2c90639e47b0f377b4a438a16b1")
 
 const vaultParams = {
-  mooName: "Moo QuickSwap QUICK-TEL",
-  mooSymbol: "mooQuickSwapQUICK-TEL",
+  mooName: "Moo QuickSwap BICO-ETH",
+  mooSymbol: "mooQuickSwapBICO-ETH",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0xF8bdC7bC282847EeB5d4291ec79172B48526e9dE",
+  rewardPool: "0x3C943fB971BCaB9C4919e5FA71612655Ebd663e5",
   unirouter: quickswap.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   output0ToNativeRoute: [QUICK, MATIC], // ["0x831753DD7087CaC61aB5644b308642cc1c33Dc13", "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"]
-  output1ToNativeRoute: [TEL, ETH, MATIC],
-  nativeToLp0Route: [MATIC, QUICK],
-  nativeToLp1Route: [MATIC, ETH, TEL],
+  output1ToNativeRoute: [BICO, ETH, MATIC],
+  nativeToLp0Route: [MATIC, ETH],
+  nativeToLp1Route: [MATIC, ETH, BICO],
 };
 
 const contractNames = {
