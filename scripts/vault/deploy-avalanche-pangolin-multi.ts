@@ -21,31 +21,31 @@ const {
   },
 } = addressBook.avax;
 
-const shouldVerifyOnEtherscan = false;
+const shouldVerifyOnEtherscan = true;
 
-const want = web3.utils.toChecksumAddress("0xdeaBb6e80141F5E557EcBDD7e9580F37D7BBc371"); // TODO
-const UST = web3.utils.toChecksumAddress("0x260Bbf5698121EB85e7a74f2E45E16Ce762EbE11");
+const want = web3.utils.toChecksumAddress("0x45324950c6ba08112EbF72754004a66a0a2b7721"); // TODO
+const FIRE = web3.utils.toChecksumAddress("0xfcc6CE74f4cd7eDEF0C5429bB99d38A3608043a5");
 const LUNA = web3.utils.toChecksumAddress("0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb");
 
 // TODO
 const vaultParams = {
-  mooName: "Moo PangolinV2 UST-AVAX", 
-  mooSymbol: "mooPangolinV2UST-AVAX",
+  mooName: "Moo PangolinV2 FIRE-AVAX", 
+  mooSymbol: "mooPangolinV2FIRE-AVAX",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 74, // TODO
+  poolId: 83, // TODO
   chef: pangolin.minichef,
   unirouter: pangolin.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [PNG, AVAX],
-  outputToLp0Route: [PNG, AVAX, UST], // TODO
-  outputToLp1Route: [PNG, AVAX], // TODO
-  // rewardsToOutputRoute: [LOOT, AVAX, PNG] //TODO
+  rewardsToNativeRoutes: [[FIRE, AVAX]], // TODO
+  nativeToLp0Route: [AVAX], // TODO
+  nativeToLp1Route: [AVAX, FIRE], // TODO
 };
 // luna -> avax -> png: 
 // [0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb, 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7, 0x60781C2586D68229fde47564546784ab3fACA982]
@@ -55,7 +55,7 @@ const strategyParams = {
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyPangolinMiniChefLP",
+  strategy: "StrategyPangolinMultiRewardsLP",
 };
 
 async function main() {
@@ -91,15 +91,15 @@ async function main() {
   const strategyConstructorArguments = [
     strategyParams.want,
     strategyParams.poolId,
-    strategyParams.chef,
     vault.address,
     strategyParams.unirouter,
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
+    strategyParams.rewardsToNativeRoutes,
+    strategyParams.nativeToLp0Route,
+    strategyParams.nativeToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -118,7 +118,7 @@ async function main() {
   if (shouldVerifyOnEtherscan) {
     // skip await as this is a long running operation, and you can do other stuff to prepare vault while this finishes
     verifyContractsPromises.push(
-      verifyContract(vault.address, vaultConstructorArguments),
+      //verifyContract(vault.address, vaultConstructorArguments),
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }

@@ -26,8 +26,8 @@ async function main() {
       } = addressBook.avax;
       
 
-      const vault = web3.utils.toChecksumAddress("0x5508222678C5337e76D93A3005dC008056715655");
-      const strategy = web3.utils.toChecksumAddress("0x7cd5A83891c42aE7dDD3eaAea9D9D54CF4bCb472");
+      const vault = web3.utils.toChecksumAddress("0x5508222678C5337e76D93A3005dC008056715655"); // TODO
+      const strategy = web3.utils.toChecksumAddress("0x7cd5A83891c42aE7dDD3eaAea9D9D54CF4bCb472"); // TODO
 
       const want = web3.utils.toChecksumAddress("0x40e747f27E6398b1f7C017c5ff5c31a2Ab69261c"); // TODO
       const LUNA = web3.utils.toChecksumAddress("0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb");
