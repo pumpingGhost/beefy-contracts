@@ -20,25 +20,26 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xEc454EdA10accdD66209C57aF8C12924556F3aBD");
+const want = web3.utils.toChecksumAddress("0xE6C2DB69dCDA38A8f56feAfC0229E6f039E5d5E2"); // TODO
+const KAE = web3.utils.toChecksumAddress("0x65Def5029A0e7591e46B38742bFEdd1Fb7b24436");
 
 const vaultParams = {
-  mooName: "Moo Boo BTC-ETH",
-  mooSymbol: "mooBooBTC-ETH",
+  mooName: "Moo Boo FTM-KAE", // TODO
+  mooSymbol: "mooBooFTM-KAE", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 35,
+  poolId: 64, // TODO
   chef: spookyswap.masterchef,
   unirouter: spookyswap.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [BOO, FTM],
-  outputToLp0Route: [BOO, FTM, BTC],
-  outputToLp1Route: [BOO, FTM, ETH],
+  outputToNativeRoute: [BOO, FTM], // TODO
+  outputToLp0Route: [BOO, FTM], // TODO
+  outputToLp1Route: [BOO, FTM, KAE], // TODO
   pendingRewardsFunctionName: "pendingBoo", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
@@ -94,7 +95,6 @@ async function main() {
   await strategy.deployed();
 
   // add this info to PR
-  console.log();
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);

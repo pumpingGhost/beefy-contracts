@@ -21,37 +21,32 @@ const {
   },
 } = addressBook.avax;
 
-const shouldVerifyOnEtherscan = true;
+const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x45324950c6ba08112EbF72754004a66a0a2b7721"); // TODO
-const FIRE = web3.utils.toChecksumAddress("0xfcc6CE74f4cd7eDEF0C5429bB99d38A3608043a5");
-const LUNA = web3.utils.toChecksumAddress("0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb");
+const want = web3.utils.toChecksumAddress("0x7472887De3B0aA65168a1Da22164C81DE5fd4044"); // TODO
+const BRIBE = web3.utils.toChecksumAddress("0xCe2fbed816E320258161CeD52c2d0CEBcdFd8136");
+const LOOT = web3.utils.toChecksumAddress("0x7f041ce89A2079873693207653b24C15B5e6A293");
 
 // TODO
 const vaultParams = {
-  mooName: "Moo PangolinV2 FIRE-AVAX", 
-  mooSymbol: "mooPangolinV2FIRE-AVAX",
+  mooName: "Moo PangolinV2 BRIBE-AVAX", 
+  mooSymbol: "mooPangolinV2BRIBE-AVAX",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 83, // TODO
+  poolId: 85, // TODO
   chef: pangolin.minichef,
   unirouter: pangolin.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [PNG, AVAX],
-  rewardsToNativeRoutes: [[FIRE, AVAX]], // TODO
+  rewardsToNativeRoutes: [[LOOT, AVAX]], // TODO
   nativeToLp0Route: [AVAX], // TODO
-  nativeToLp1Route: [AVAX, FIRE], // TODO
+  nativeToLp1Route: [AVAX, BRIBE], // TODO
 };
-// luna -> avax -> png: 
-// [0x120AD3e5A7c796349e591F1570D9f7980F4eA9cb, 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7, 0x60781C2586D68229fde47564546784ab3fACA982]
-
-// avax -> png: 
-// [0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7, 0x60781C2586D68229fde47564546784ab3fACA982]
 
 const contractNames = {
   vault: "BeefyVaultV6",

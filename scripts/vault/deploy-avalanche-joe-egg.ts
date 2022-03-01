@@ -24,8 +24,8 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x3052a75dfD7A9D9B0F81E510E01d3Fe80A9e7ec7"); // TODO
-const EGG = web3.utils.toChecksumAddress("0x7761E2338B35bCEB6BdA6ce477EF012bde7aE611")
+const want = web3.utils.toChecksumAddress("0x939D6eD8a0f7FC90436BA6842D7372250a03fA7c"); // TODO
+const FIEF = web3.utils.toChecksumAddress("0xeA068Fba19CE95f12d252aD8Cb2939225C4Ea02D")
 const FEED = web3.utils.toChecksumAddress("0xab592d197ACc575D16C3346f4EB70C703F308D1E")
 
 // TODO
@@ -44,9 +44,9 @@ const strategyParams = {
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [JOE, AVAX],
-  secondOutputToNativeRoute: [FEED, AVAX],
-  nativeToLp0Route: [AVAX, EGG], // TODO
-  nativeToLp1Route: [AVAX], // TODO
+  secondOutputToNativeRoute: [AVAX],
+  nativeToLp0Route: [AVAX], // TODO
+  nativeToLp1Route: [AVAX, FIEF], // TODO
 };
 
 const contractNames = {

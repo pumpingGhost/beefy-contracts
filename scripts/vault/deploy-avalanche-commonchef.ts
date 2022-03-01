@@ -2,54 +2,49 @@ import hardhat, { ethers, web3 } from "hardhat";
 import { addressBook } from "blockchain-addressbook";
 import { predictAddresses } from "../../utils/predictAddresses";
 import { setCorrectCallFee } from "../../utils/setCorrectCallFee";
+import { setPendingRewardsFunctionName } from "../../utils/setPendingRewardsFunctionName";
 import { verifyContract } from "../../utils/verifyContract";
 import { BeefyChain } from "../../utils/beefyChain";
 
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { pangolin, beefyfinance },
+  platforms: { joe, beefyfinance },
   tokens: {
-    PNG: { address: PNG },
-    MIM: { address: MIM },
     AVAX: { address: AVAX },
-    USDCe: { address: USDCe },
-    DAIe: { address: DAIe },
-    TIME: { address: TIME },
-    SPELL: { address: SPELL },
-    XAVA: { address: XAVA },
-    USDC: { address: USDC },
+    ETH: { address: ETH },
   },
 } = addressBook.avax;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xbCEd3B6D759B9CA8Fc7706E46Aa81627b2e9EAE8"); // TODO
-const TUS = web3.utils.toChecksumAddress("0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172");
+const want = web3.utils.toChecksumAddress("0x6139361Ccd4f40abF3d5D22AA3b72A195010F9AB"); // TODO
+const PAE = web3.utils.toChecksumAddress("0x9466Ab927611725B9AF76b9F31B2F879Ff14233d");
+const pAVAX = web3.utils.toChecksumAddress("0x6ca558bd3eaB53DA1B25aB97916dd14bf6CFEe4E");  
 
-// TODO
 const vaultParams = {
-  mooName: "Moo PangolinV2 TUS-AVAX", 
-  mooSymbol: "mooPangolinV2TUS-AVAX",
+  mooName: "Moo Ripae PAE-AVAX", // TODO
+  mooSymbol: "mooRipaePAE-AVAX", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 53, // TODO
-  chef: pangolin.minichef,
-  unirouter: pangolin.router,
+  poolId: 1, // TODO
+  chef: "0xb5cc0Ed74dde9F26fBfFCe08FF78227F4Fa86029",
+  unirouter: joe.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [PNG, AVAX],
-  outputToLp0Route: [PNG, AVAX], // TODO
-  outputToLp1Route: [PNG, AVAX, TUS], // TODO
+  outputToNativeRoute: [PAE, AVAX], // TODO
+  outputToLp0Route: [PAE], // TODO
+  outputToLp1Route: [PAE, AVAX], // TODO
+  pendingRewardsFunctionName: "pendingPAE", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyPangolinMiniChefLP",
+  strategy: "StrategyCommonChefLP",
 };
 
 async function main() {
@@ -115,8 +110,8 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
- // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain); // prefer to do it manually
+    await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+ // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 
   await Promise.all(verifyContractsPromises);

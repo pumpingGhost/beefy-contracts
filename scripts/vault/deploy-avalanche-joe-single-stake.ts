@@ -8,48 +8,46 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { pangolin, beefyfinance },
+  platforms: { joe, beefyfinance },
   tokens: {
     PNG: { address: PNG },
     MIM: { address: MIM },
     AVAX: { address: AVAX },
     USDCe: { address: USDCe },
+    USDC: { address: USDC },
     DAIe: { address: DAIe },
     TIME: { address: TIME },
     SPELL: { address: SPELL },
     XAVA: { address: XAVA },
-    USDC: { address: USDC },
+    JOE: { address: JOE },
   },
 } = addressBook.avax;
 
-const shouldVerifyOnEtherscan = false;
+const shouldVerifyOnEtherscan = true;
 
-const want = web3.utils.toChecksumAddress("0xbCEd3B6D759B9CA8Fc7706E46Aa81627b2e9EAE8"); // TODO
-const TUS = web3.utils.toChecksumAddress("0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172");
+const want = web3.utils.toChecksumAddress("0x6e84a6216eA6dACC71eE8E6b0a5B7322EEbC0fDd"); // TODO
 
 // TODO
 const vaultParams = {
-  mooName: "Moo PangolinV2 TUS-AVAX", 
-  mooSymbol: "mooPangolinV2TUS-AVAX",
+  mooName: "Moo sJoe", 
+  mooSymbol: "mooSJoe",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 53, // TODO
-  chef: pangolin.minichef,
-  unirouter: pangolin.router,
+  rewardPool: "0x1a731B2299E22FbAC282E7094EdA41046343Cb51", // TODO
+  unirouter: joe.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [PNG, AVAX],
-  outputToLp0Route: [PNG, AVAX], // TODO
-  outputToLp1Route: [PNG, AVAX, TUS], // TODO
+  outputToNativeRoute: [USDC, AVAX],
+  outputToWantRoute: [USDC, USDCe, JOE]
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyPangolinMiniChefLP",
+  strategy: "StrategyTraderJoeSingleStake",
 };
 
 async function main() {
@@ -84,25 +82,24 @@ async function main() {
 
   const strategyConstructorArguments = [
     strategyParams.want,
-    strategyParams.poolId,
-    strategyParams.chef,
+    strategyParams.rewardPool,
     vault.address,
     strategyParams.unirouter,
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
+    strategyParams.outputToWantRoute,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
 
   // add this info to PR
+  console.log();
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
-  console.log("PoolId:", strategyParams.poolId);
+  console.log("stakingContract:", strategyParams.rewardPool);
 
   console.log();
   console.log("Running post deployment");
@@ -111,7 +108,7 @@ async function main() {
   if (shouldVerifyOnEtherscan) {
     // skip await as this is a long running operation, and you can do other stuff to prepare vault while this finishes
     verifyContractsPromises.push(
-      verifyContract(vault.address, vaultConstructorArguments),
+    //   verifyContract(vault.address, vaultConstructorArguments),
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
