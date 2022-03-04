@@ -62,28 +62,28 @@ async function main() {
 
   await hardhat.run("compile");
 
-  const Vault = await ethers.getContractFactory(contractNames.vault);
+  // const Vault = await ethers.getContractFactory(contractNames.vault);
   const Strategy = await ethers.getContractFactory(contractNames.strategy);
 
   const [deployer] = await ethers.getSigners();
 
   console.log("Deploying:", vaultParams.mooName);
 
-  const predictedAddresses = await predictAddresses({ creator: deployer.address });
+  // const predictedAddresses = await predictAddresses({ creator: deployer.address });
 
-  const vaultConstructorArguments = [
-    predictedAddresses.strategy,
-    vaultParams.mooName,
-    vaultParams.mooSymbol,
-    vaultParams.delay,
-  ];
-  const vault = await Vault.deploy(...vaultConstructorArguments);
-  await vault.deployed();
+  // const vaultConstructorArguments = [
+  //   predictedAddresses.strategy,
+  //   vaultParams.mooName,
+  //   vaultParams.mooSymbol,
+  //   vaultParams.delay,
+  // ];
+  // const vault = await Vault.deploy(...vaultConstructorArguments);
+  // await vault.deployed();
 
   const strategyConstructorArguments = [
     strategyParams.want,
     strategyParams.rewardPool,
-    vault.address,
+    "0xD24Aa3822934596D8700a93b95E0e54fE509dC12",
     strategyParams.unirouter,
     strategyParams.keeper,
     strategyParams.strategist,
@@ -96,7 +96,7 @@ async function main() {
 
   // add this info to PR
   console.log();
-  console.log("Vault:", vault.address);
+  console.log("Vault:", "0xD24Aa3822934596D8700a93b95E0e54fE509dC12");
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
   console.log("stakingContract:", strategyParams.rewardPool);
@@ -117,11 +117,6 @@ async function main() {
   console.log();
 
   await Promise.all(verifyContractsPromises);
-
-  if (hardhat.network.name === "bsc") {
-    await registerSubsidy(vault.address, deployer);
-    await registerSubsidy(strategy.address, deployer);
-  }
 }
 
 main()

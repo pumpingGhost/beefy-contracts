@@ -18,26 +18,26 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x6139361Ccd4f40abF3d5D22AA3b72A195010F9AB"); // TODO
+const want = web3.utils.toChecksumAddress("0x1179E6AF2794fA9d39316951e868772F96230375"); // TODO
 const PAE = web3.utils.toChecksumAddress("0x9466Ab927611725B9AF76b9F31B2F879Ff14233d");
 const pAVAX = web3.utils.toChecksumAddress("0x6ca558bd3eaB53DA1B25aB97916dd14bf6CFEe4E");  
 
 const vaultParams = {
-  mooName: "Moo Ripae PAE-AVAX", // TODO
-  mooSymbol: "mooRipaePAE-AVAX", // TODO
+  mooName: "Moo Ripae pAVAX-AVAX Dummy", // TODO
+  mooSymbol: "mooRipaepAVAX-AVAXDummy", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 1, // TODO
+  poolId: 0, // TODO
   chef: "0xb5cc0Ed74dde9F26fBfFCe08FF78227F4Fa86029",
   unirouter: joe.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [PAE, AVAX], // TODO
-  outputToLp0Route: [PAE], // TODO
+  outputToLp0Route: [PAE, AVAX, pAVAX], // TODO
   outputToLp1Route: [PAE, AVAX], // TODO
   pendingRewardsFunctionName: "pendingPAE", // used for rewardsAvailable(), use correct function name from masterchef
 };
@@ -60,16 +60,16 @@ async function main() {
   await hardhat.run("compile");
 
   const Vault = await ethers.getContractFactory(contractNames.vault);
-  const Strategy = await ethers.getContractFactory(contractNames.strategy);
+  // const Strategy = await ethers.getContractFactory(contractNames.strategy);
 
   const [deployer] = await ethers.getSigners();
 
   console.log("Deploying:", vaultParams.mooName);
 
-  const predictedAddresses = await predictAddresses({ creator: deployer.address });
+  // const predictedAddresses = await predictAddresses({ creator: deployer.address });
 
   const vaultConstructorArguments = [
-    predictedAddresses.strategy,
+    "0x036f797B1C87A0684283bC2301EfDAD3625A2d3E",
     vaultParams.mooName,
     vaultParams.mooSymbol,
     vaultParams.delay,
@@ -77,25 +77,25 @@ async function main() {
   const vault = await Vault.deploy(...vaultConstructorArguments);
   await vault.deployed();
 
-  const strategyConstructorArguments = [
-    strategyParams.want,
-    strategyParams.poolId,
-    strategyParams.chef,
-    vault.address,
-    strategyParams.unirouter,
-    strategyParams.keeper,
-    strategyParams.strategist,
-    strategyParams.beefyFeeRecipient,
-    strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
-  ];
-  const strategy = await Strategy.deploy(...strategyConstructorArguments);
-  await strategy.deployed();
+  // const strategyConstructorArguments = [
+  //   strategyParams.want,
+  //   strategyParams.poolId,
+  //   strategyParams.chef,
+  //   "0xD78d5464690544F5D838dAEF0D7650fA03c64598",
+  //   strategyParams.unirouter,
+  //   strategyParams.keeper,
+  //   strategyParams.strategist,
+  //   strategyParams.beefyFeeRecipient,
+  //   strategyParams.outputToNativeRoute,
+  //   strategyParams.outputToLp0Route,
+  //   strategyParams.outputToLp1Route,
+  // ];
+  // const strategy = await Strategy.deploy(...strategyConstructorArguments);
+  // await strategy.deployed();
 
   // add this info to PR
-  console.log("Vault:", vault.address);
-  console.log("Strategy:", strategy.address);
+  // console.log("Vault:", "0xD78d5464690544F5D838dAEF0D7650fA03c64598");
+  // console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
   console.log("PoolId:", strategyParams.poolId);
 
@@ -106,20 +106,15 @@ async function main() {
   if (shouldVerifyOnEtherscan) {
     // skip await as this is a long running operation, and you can do other stuff to prepare vault while this finishes
     verifyContractsPromises.push(
-      verifyContract(vault.address, vaultConstructorArguments),
-      verifyContract(strategy.address, strategyConstructorArguments)
+      // verifyContract(vault.address, vaultConstructorArguments),
+      // verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-    await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+    // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 
   await Promise.all(verifyContractsPromises);
-
-  if (hardhat.network.name === "bsc") {
-    await registerSubsidy(vault.address, deployer);
-    await registerSubsidy(strategy.address, deployer);
-  }
 }
 
 main()
