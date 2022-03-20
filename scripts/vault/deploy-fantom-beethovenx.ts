@@ -11,6 +11,7 @@ const {
     platforms: { beets, beefyfinance },
     tokens: {
         FTM: { address: FTM },
+        BEETS: { address: BEETS },
     },
 } = addressBook.fantom;
 
@@ -18,24 +19,27 @@ const shouldVerifyOnEtherscan = false;
 
 // TODO
 const vaultParams = {
-    mooName: "Moo Beet Tempered Clavier",
-    mooSymbol: "mooBeetTemperedClavier",
+    mooName: "Moo Beet Boomer Beets",
+    mooSymbol: "mooBeetBoomerBeets",
     delay: 21600,
 };
 
 const strategyParams = {
     // TODO: wantPoolId(hex), nativeSwapPoolId, inputSwapPoolId
-    balancerPoolIds: ["0xfa901cadcaf38cd533e8b1f693d090fc7005658e000100000000000000000165", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019"],
-    chefPoolId: 35, // TODO
+    balancerPoolIds: ["0x8fdd16a23aebe95b928f1863760618e9ec29e72d000100000000000000000166", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019"],
+    chefPoolId: 50, // TODO
     chef: "0x8166994d9ebBe5829EC86Bd81258149B87faCfd3",
-    input: FTM, // TODO: choose either FTM, BEETS or UDSC as input token(You can provide the full amount in the same currency, no need for equal shares between the tokens)
+    input: FTM, // TODO: choose either FTM, UDSC or BEETS as input token(You can provide the full amount in the same currency, no need for equal shares between the tokens)
     unirouter: "0x20dd72Ed959b6147912C2e529F0a0C651c33c9ce", // Beethoven master vault
     keeper: beefyfinance.keeper,
     strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E",
     beefyFeeRecipient: beefyfinance.beefyFeeRecipient
 };
 
-const predeployedStrategy = web3.utils.toChecksumAddress("0x89c39450B30188BBbFd53b0e3e3BB332d0171353");
+// Boomer: 0x8DBB92ca6c399792AC07510a0996C59902cD75a1, 62
+
+// FTM-BEETS: 0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019
+// ["0x8dbb92ca6c399792ac07510a0996c59902cd75a1000200000000000000000299", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019"]
 
 const contractNames = {
     vault: "BeefyVaultV6",
@@ -61,7 +65,9 @@ async function main() {
 
     console.log("Deploying:", vaultParams.mooName);
 
-    // const predictedAddresses = await predictAddresses({ creator: deployer.address });
+    //const predictedAddresses = await predictAddresses({ creator: deployer.address });
+    
+    const predeployedStrategy = web3.utils.toChecksumAddress("0xceb6d118640FF21ED47de296669Ba7A74752942b");
 
     const vaultConstructorArguments = [
         predeployedStrategy,
@@ -83,11 +89,10 @@ async function main() {
         strategyParams.strategist,
         strategyParams.beefyFeeRecipient,
     ];
-   // const strategy = await Strategy.deploy(...strategyConstructorArguments);
-   // await strategy.deployed();
+    // const strategy = await Strategy.deploy(...strategyConstructorArguments);
+    // await strategy.deployed();
 
     // add this info to PR
-    console.log();
     console.log("Vault:", vault.address);
     console.log("Strategy:", predeployedStrategy);
     console.log("ChefPoolId:", strategyParams.chefPoolId);

@@ -26,18 +26,18 @@ const UST = web3.utils.toChecksumAddress("0x0D58a44be3dCA0aB449965dcc2c46932547F
 const GoodDollar = web3.utils.toChecksumAddress("0x495d133B938596C9984d462F007B676bDc57eCEC");
 const agEUR = web3.utils.toChecksumAddress("0xeFAeeE334F0Fd1712f9a8cc375f427D9Cdd40d73");
 
-const want = web3.utils.toChecksumAddress("0xeeD7A28eEd4E768fCD46dE3642AB73488De77e11");
+const want = web3.utils.toChecksumAddress("0x97a6e78c9208c21afaDa67e7E61d7ad27688eFd1");
 
 
 const vaultParams = {
-  mooName: "Moo Voltage agEUR-FUSE",
-  mooSymbol: "mooVoltageagEUR-FUSE",
+  mooName: "Moo Voltage xVOLT",
+  mooSymbol: "mooVoltagexVOLT",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 12,
+  poolId: 11,
   chef: "0xE3e184a7b75D0Ae6E17B58F5283b91B4E0A2604F",
   unirouter: "0xE3F85aAd0c8DD7337427B9dF5d0fB741d65EEEB5",
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
