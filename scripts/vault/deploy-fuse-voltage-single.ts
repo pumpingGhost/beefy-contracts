@@ -24,8 +24,6 @@ const WBTC = web3.utils.toChecksumAddress("0x33284f95ccb7B948d9D352e1439561CF83d
 const WETH = web3.utils.toChecksumAddress("0xa722c13135930332Eb3d749B2F0906559D2C5b99");
 const UST = web3.utils.toChecksumAddress("0x0D58a44be3dCA0aB449965dcc2c46932547Fea2f");
 const GoodDollar = web3.utils.toChecksumAddress("0x495d133B938596C9984d462F007B676bDc57eCEC");
-const BUSD = web3.utils.toChecksumAddress("0x6a5F6A8121592BeCd6747a38d67451B310F7f156");
-const USDC = web3.utils.toChecksumAddress("0x620fd5fa44BE6af63715Ef4E65DDFA0387aD13F5");
 const agEUR = web3.utils.toChecksumAddress("0xeFAeeE334F0Fd1712f9a8cc375f427D9Cdd40d73");
 
 const want = web3.utils.toChecksumAddress("0xeeD7A28eEd4E768fCD46dE3642AB73488De77e11");
@@ -45,15 +43,15 @@ const strategyParams = {
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [VOLT, FUSE],
-  secondOutputToNativeRoute: [FUSE],
-  nativeToLp0Route: [FUSE],
-  nativeToLp1Route: [FUSE, VOLT],
+  outputToNativeRoute: [FUSE],
+  outputToLp0Route: [FUSE],
+  outputToLp1Route: [FUSE, agEUR],
+  pendingRewardsFunctionName: "pendingTokens",
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyVoltageMultiRewards",
+  strategy: "StrategyCommonChefLP",
 };
 
 async function main() {
@@ -96,9 +94,8 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.secondOutputToNativeRoute,
-    strategyParams.nativeToLp0Route,
-    strategyParams.nativeToLp1Route,
+    strategyParams.outputToLp0Route,
+    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -120,7 +117,7 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-//   await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+  await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 

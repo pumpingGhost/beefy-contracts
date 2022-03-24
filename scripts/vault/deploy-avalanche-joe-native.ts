@@ -22,29 +22,30 @@ const {
   },
 } = addressBook.avax;
 
-const shouldVerifyOnEtherscan = true;
+const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x939D6eD8a0f7FC90436BA6842D7372250a03fA7c"); // TODO
-const FIEF = web3.utils.toChecksumAddress("0xeA068Fba19CE95f12d252aD8Cb2939225C4Ea02D")
+const want = web3.utils.toChecksumAddress("0x11bBfA2Fa3b995ceA99D20DFA618fd32e252d8F2"); // TODO
+const APE = web3.utils.toChecksumAddress("0x0802d66f029c46E042b74d543fC43B6705ccb4ba")
 
 // TODO
 const vaultParams = {
-  mooName: "Moo Joe AVAX-FIEF", 
-  mooSymbol: "mooJoeAVAX-FIEF",
+  mooName: "Moo Joe AVAX-APE", 
+  mooSymbol: "mooJoeAVAX-APE",
   delay: 21600,
 };
 
+// This strategy is also eligible for standard single reward farms (JOE reward)
 const strategyParams = {
   want,
-  poolId: 52, // TODO
+  poolId: 63, // TODO
   chef: joe.masterchefV3,
   unirouter: joe.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [JOE, AVAX],
-  nativeToLp0Route: [AVAX], // TODO
-  nativeToLp1Route: [AVAX, FIEF], // TODO
+  nativeToLp0Route: [AVAX, APE], // TODO
+  nativeToLp1Route: [AVAX], // TODO
 };
 
 const contractNames = {

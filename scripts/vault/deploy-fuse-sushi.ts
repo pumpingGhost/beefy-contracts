@@ -9,9 +9,11 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { fusefi, beefyfinance },
+  platforms: { sushiFuse, beefyfinance },
   tokens: {
     FUSE: { address: FUSE },
+    USDC: { address: USDC },
+    USDT: { address: USDT },
   },
 } = addressBook.fuse;
 
@@ -26,32 +28,31 @@ const UST = web3.utils.toChecksumAddress("0x0D58a44be3dCA0aB449965dcc2c46932547F
 const GoodDollar = web3.utils.toChecksumAddress("0x495d133B938596C9984d462F007B676bDc57eCEC");
 const agEUR = web3.utils.toChecksumAddress("0xeFAeeE334F0Fd1712f9a8cc375f427D9Cdd40d73");
 
-const want = web3.utils.toChecksumAddress("0xeeD7A28eEd4E768fCD46dE3642AB73488De77e11");
+const want = web3.utils.toChecksumAddress("0x00E485d833099679eD7D121CE46a9557ea8aDa1e");
 
 
 const vaultParams = {
-  mooName: "Moo Voltage agEUR-FUSE",
-  mooSymbol: "mooVoltageagEUR-FUSE",
+  mooName: "Moo Sushi USDC-USDT",
+  mooSymbol: "mooSushiUSDC-USDT",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 12,
-  chef: "0xE3e184a7b75D0Ae6E17B58F5283b91B4E0A2604F",
-  unirouter: "0xE3F85aAd0c8DD7337427B9dF5d0fB741d65EEEB5",
+  poolId: 5,
+  chef: sushiFuse.minichef,
+  unirouter: sushiFuse.router,
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [VOLT, FUSE],
-  outputToLp0Route: [VOLT, FUSE],
-  outputToLp1Route: [VOLT, FUSE, agEUR],
-  pendingRewardsFunctionName: "pendingTokens",
+  outputToNativeRoute: [FUSE, FUSE],
+  nativeToLp0Route: [FUSE, USDC],
+  nativeToLp1Route: [FUSE, USDC, USDT],
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyCommonChefLP",
+  strategy: "StrategySushiNativeDualLP",
 };
 
 async function main() {
@@ -94,8 +95,8 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
+    strategyParams.nativeToLp0Route,
+    strategyParams.nativeToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -117,7 +118,7 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+  // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 

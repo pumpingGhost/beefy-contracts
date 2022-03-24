@@ -43,15 +43,13 @@ const strategyParams = {
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [VOLT, FUSE],
-  outputToLp0Route: [VOLT, FUSE],
-  outputToLp1Route: [VOLT, FUSE, agEUR],
-  pendingRewardsFunctionName: "pendingTokens",
+  outputToNativeRoute: [FUSE],
+  outputToUnstakedWantRoute: [FUSE, VOLT],
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyCommonChefLP",
+  strategy: "StrategyxVolt",
 };
 
 async function main() {
@@ -94,8 +92,7 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
+    strategyParams.outputToUnstakedWantRoute,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -117,7 +114,7 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
-  await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+  //await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 
