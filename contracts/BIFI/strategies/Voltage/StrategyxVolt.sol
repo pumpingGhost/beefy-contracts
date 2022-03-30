@@ -189,7 +189,7 @@ contract StrategyxVolt is StratManager, FeeManager {
 
     // native reward amount for calling harvest
     function callReward() public view returns (uint256) {
-        (uint256 outputBal,) = rewardsAvailable();
+        (, uint256 outputBal) = rewardsAvailable();
         uint256 nativeOut;
         if (outputBal > 0) {
             try IUniswapRouterETH(unirouter).getAmountsOut(outputBal, outputToNativeRoute)

@@ -218,19 +218,15 @@ contract StrategyVoltageMultiRewards is StratManager, FeeManager {
         (uint256 outputBal, uint256 secondBal) = rewardsAvailable();
         uint256 nativeBal;
 
-        try IUniswapRouter(unirouter).getAmountsOut(outputBal, outputToNativeRoute)
-            returns (uint256[] memory amountOut)
-        {
+        if (outputBal > 0) {
+            uint256[] memory amountOut = IUniswapRouter(unirouter).getAmountsOut(outputBal, outputToNativeRoute);
             nativeBal = nativeBal.add(amountOut[amountOut.length -1]);
         }
-        catch {}
 
-        try IUniswapRouter(unirouter).getAmountsOut(secondBal, secondOutputToNativeRoute)
-            returns (uint256[] memory amountOut)
-        {
+        if (secondBal > 0) {
+            uint256[] memory amountOut = IUniswapRouter(unirouter).getAmountsOut(secondBal, secondOutputToNativeRoute);
             nativeBal = nativeBal.add(amountOut[amountOut.length -1]);
         }
-        catch {}
 
         return nativeBal.mul(45).div(1000).mul(callFee).div(MAX_FEE);
     }

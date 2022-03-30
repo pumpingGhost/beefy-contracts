@@ -9,44 +9,40 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { spookyswap, beefyfinance },
+  platforms: { beefyfinance },
   tokens: {
-    BTC: { address: BTC },
-    ETH: { address: ETH },
-    BOO: { address: BOO },
-    FTM: { address: FTM },
-    USDC: { address: USDC },
-    TOMB: { address: TOMB },
+    CRO: { address: CRO },
   },
-} = addressBook.fantom;
+} = addressBook.cronos;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xfca12A13ac324C09e9F43B5e5cfC9262f3Ab3223"); // TODO
-const MAI = web3.utils.toChecksumAddress("0xfB98B335551a418cD0737375a2ea0ded62Ea213b");
-const TSHARE = web3.utils.toChecksumAddress("0x4cdF39285D7Ca8eB3f090fDA0C069ba5F4145B37");
+const want = web3.utils.toChecksumAddress("0xbfAAB211C3ea99A2Db682fbc1D9a999861dCba2D"); // TODO
+const NESS = web3.utils.toChecksumAddress("0xE727240728C1a5f95437b8b50AFDd0EA4AE5F0c8");
+const MSHARE = web3.utils.toChecksumAddress("0xb011EC534d9175cD7a69aFBfc1bcc9990862c462");
+// const USDC = web3.utils.toChecksumAddress("0x04068DA6C83AFCFA0e13ba15A6696662335D5B75");
 const BASED = web3.utils.toChecksumAddress("0x8D7d3409881b51466B483B11Ea1B8A03cdEd89ae");
 const BSHARE = web3.utils.toChecksumAddress("0x49C290Ff692149A4E16611c694fdED42C954ab7a");
-
+const TOMB = web3.utils.toChecksumAddress("0x6c021Ae822BEa943b2E66552bDe1D2696a53fbB7");
 
 const vaultParams = {
-  mooName: "Moo Tomb TOMB-FTM", // TODO
-  mooSymbol: "mooTombTOMB-FTM", // TODO
+  mooName: "Moo Dark NESS-CRO", // TODO
+  mooSymbol: "mooDarkNESS-CRO", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 3, // TODO
-  chef: "0xcc0a87F7e7c693042a9Cc703661F5060c80ACb43",   // Based masterchef:  0xAc0fa95058616D7539b6Eecb6418A68e7c18A746
-  unirouter: "0x6D0176C5ea1e44b08D3dd001b0784cE42F47a3A7",
-  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
+  poolId: 0, // TODO
+  chef: "0x63Df75d039f7d7A8eE4A9276d6A9fE7990D7A6C5",   // Proxy Ness Rewarder
+  unirouter: "0x145677FC4d9b8F19B5D56d1820c48e0443049a30",
+  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [TSHARE, FTM], // TODO
-  outputToLp0Route: [TSHARE, FTM], // TODO
-  outputToLp1Route: [TSHARE, TOMB], // TODO
-  pendingRewardsFunctionName: "pendingShare", // used for rewardsAvailable(), use correct function name from masterchef
+  outputToNativeRoute: [NESS, CRO], // TODO
+  outputToLp0Route: [NESS, CRO], // TODO
+  outputToLp1Route: [NESS], // TODO
+  pendingRewardsFunctionName: "pendingReward", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
@@ -64,6 +60,7 @@ async function main() {
     return;
   }
 
+  
   await hardhat.run("compile");
 
   const Vault = await ethers.getContractFactory(contractNames.vault);
@@ -113,7 +110,7 @@ async function main() {
   if (shouldVerifyOnEtherscan) {
     // skip await as this is a long running operation, and you can do other stuff to prepare vault while this finishes
     verifyContractsPromises.push(
-    //   verifyContract(vault.address, vaultConstructorArguments),
+      // verifyContract(vault.address, vaultConstructorArguments),
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }

@@ -15,43 +15,39 @@ const {
     ETH: { address: ETH },
     BOO: { address: BOO },
     FTM: { address: FTM },
-    USDC: { address: USDC },
-    TOMB: { address: TOMB },
   },
 } = addressBook.fantom;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xfca12A13ac324C09e9F43B5e5cfC9262f3Ab3223"); // TODO
-const MAI = web3.utils.toChecksumAddress("0xfB98B335551a418cD0737375a2ea0ded62Ea213b");
-const TSHARE = web3.utils.toChecksumAddress("0x4cdF39285D7Ca8eB3f090fDA0C069ba5F4145B37");
-const BASED = web3.utils.toChecksumAddress("0x8D7d3409881b51466B483B11Ea1B8A03cdEd89ae");
-const BSHARE = web3.utils.toChecksumAddress("0x49C290Ff692149A4E16611c694fdED42C954ab7a");
-
+const want = web3.utils.toChecksumAddress("0x12edeA9cd262006cC3C4E77c90d2CD2DD4b1eb97"); // TODO
+const USDC = web3.utils.toChecksumAddress("0x04068DA6C83AFCFA0e13ba15A6696662335D5B75");
+const STG = web3.utils.toChecksumAddress("0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590");
 
 const vaultParams = {
-  mooName: "Moo Tomb TOMB-FTM", // TODO
-  mooSymbol: "mooTombTOMB-FTM", // TODO
+  mooName: "Moo Stargate USDC", // TODO
+  mooSymbol: "mooStargateUSDC", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 3, // TODO
-  chef: "0xcc0a87F7e7c693042a9Cc703661F5060c80ACb43",   // Based masterchef:  0xAc0fa95058616D7539b6Eecb6418A68e7c18A746
-  unirouter: "0x6D0176C5ea1e44b08D3dd001b0784cE42F47a3A7",
+  farmPoolId: 0, // TODO
+  routerPoolId: 1,
+  chef: "0x224D8Fd7aB6AD4c6eb4611Ce56EF35Dec2277F03",   // Stargate Rewarder
+  unirouter: spookyswap.router,
+  stargaterouter: "0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6",
   strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [TSHARE, FTM], // TODO
-  outputToLp0Route: [TSHARE, FTM], // TODO
-  outputToLp1Route: [TSHARE, TOMB], // TODO
-  pendingRewardsFunctionName: "pendingShare", // used for rewardsAvailable(), use correct function name from masterchef
+  outputToNativeRoute: [STG, USDC, FTM], // TODO
+  outputToLp0Route: [STG, USDC], // TODO
+  pendingRewardsFunctionName: "pendingStargate", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyCommonChefLP",
+  strategy: "StrategyStargateStaking",
 };
 
 async function main() {
@@ -64,6 +60,7 @@ async function main() {
     return;
   }
 
+  
   await hardhat.run("compile");
 
   const Vault = await ethers.getContractFactory(contractNames.vault);
@@ -86,16 +83,17 @@ async function main() {
 
   const strategyConstructorArguments = [
     strategyParams.want,
-    strategyParams.poolId,
+    strategyParams.farmPoolId,
+    strategyParams.routerPoolId,
     strategyParams.chef,
     vault.address,
     strategyParams.unirouter,
+    strategyParams.stargaterouter,
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
     strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -104,7 +102,7 @@ async function main() {
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
-  console.log("PoolId:", strategyParams.poolId);
+  console.log("PoolId:", strategyParams.farmPoolId);
 
   console.log();
   console.log("Running post deployment");
@@ -113,7 +111,7 @@ async function main() {
   if (shouldVerifyOnEtherscan) {
     // skip await as this is a long running operation, and you can do other stuff to prepare vault while this finishes
     verifyContractsPromises.push(
-    //   verifyContract(vault.address, vaultConstructorArguments),
+      // verifyContract(vault.address, vaultConstructorArguments),
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }

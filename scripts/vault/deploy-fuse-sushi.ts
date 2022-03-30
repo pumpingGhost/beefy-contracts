@@ -14,6 +14,7 @@ const {
     FUSE: { address: FUSE },
     USDC: { address: USDC },
     USDT: { address: USDT },
+    SUSHI: { address: SUSHI },
   },
 } = addressBook.fuse;
 
@@ -45,7 +46,7 @@ const strategyParams = {
   strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [FUSE, FUSE],
+  outputToNativeRoute: [SUSHI, FUSE], // will not be swapped if SUSHI < 0, but some route is required to satisfy constructor args.
   nativeToLp0Route: [FUSE, USDC],
   nativeToLp1Route: [FUSE, USDC, USDT],
 };
