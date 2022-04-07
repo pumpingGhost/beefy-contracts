@@ -24,28 +24,28 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x1371a6d8CBe2Ca66d0911f270e1cAA7C12A3045A"); // TODO
-const FLY = web3.utils.toChecksumAddress("0x78Ea3fef1c1f07348199Bf44f45b803b9B0Dbe28");
+const want = web3.utils.toChecksumAddress("0x9C396cF96319C8EF2b662Af57DEA6EE374b9959F"); // TODO
+const LOST = web3.utils.toChecksumAddress("0x449674B82F05d498E126Dd6615a1057A9c088f2C");
 const QI = web3.utils.toChecksumAddress("0x8729438EB15e2C8B576fCc6AeCdA6A148776C0F5");
 
 // TODO
 const vaultParams = {
-  mooName: "Moo Joe AVAX-FLY", 
-  mooSymbol: "mooJoeAVAX-FLY",
+  mooName: "Moo Joe AVAX-LOST", 
+  mooSymbol: "mooJoeAVAX-LOST",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 59, // TODO
+  poolId: 67, // TODO
   chef: joe.masterchefV3,
   unirouter: joe.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
+  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [JOE, AVAX],
-  secondOutputToNativeRoute: [FLY, AVAX],
-  nativeToLp0Route: [AVAX, FLY], // TODO
+  secondOutputToNativeRoute: [LOST, AVAX],
+  nativeToLp0Route: [AVAX, LOST], // TODO
   nativeToLp1Route: [AVAX], // TODO
 };
 

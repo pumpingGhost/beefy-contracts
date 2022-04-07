@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../../interfaces/common/IUniswapRouterETH.sol";
 import "../../interfaces/beethovenx/IBeethovenxChef.sol";
+import "../../interfaces/beethovenx/IBeetRewarder.sol";
 import "../../interfaces/beethovenx/IBalancerVault.sol";
 import "../Common/StratManager.sol";
 import "../Common/FeeManager.sol";
@@ -26,13 +27,13 @@ contract StrategyBeethovenxUST is StratManager, FeeManager {
     address[] public lpTokens;
 
     // Third party contracts
+    address public rewarder;
     address public chef;
     uint256 public chefPoolId;
     bytes32 public wantPoolId;
-    bytes32 public inputSwapPoolId;
 
     // Routes
-    address[] public outputToNativeRoute;
+    address[] public inputToNativeRoute;
 
     IBalancerVault.SwapKind public swapKind;
     IBalancerVault.FundManagement public funds;
@@ -48,25 +49,25 @@ contract StrategyBeethovenxUST is StratManager, FeeManager {
         bytes32[] memory _balancerPoolIds,
         uint256 _chefPoolId,
         address _chef,
-        address _input,
+        address _output,
         address _vault,
         address _unirouter,
         address _keeper,
         address _strategist,
         address _beefyFeeRecipient,
-        address[] memory _outputToNativeRoute
+        address[] memory _inputToNativeRoute
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
         wantPoolId = _balancerPoolIds[0];
-        inputSwapPoolId = _balancerPoolIds[1];
         chefPoolId = _chefPoolId;
         chef = _chef;
-        input = _input;
-        outputToNativeRoute = _outputToNativeRoute;
+        output = _output;
+        inputToNativeRoute = _inputToNativeRoute;
 
-        require(_outputToNativeRoute[_outputToNativeRoute.length - 1] == native, "_outputToNativeRoute[last] != native");
-        output = _outputToNativeRoute[0];
+        require(_inputToNativeRoute[_inputToNativeRoute.length - 1] == native, "_inputToNativeRoute[last] != native");
+        input = _inputToNativeRoute[0];
 
         (want,) = IBalancerVault(unirouter).getPool(wantPoolId);
+        rewarder = IBeethovenxChef(chef).rewarder(chefPoolId);
 
         (lpTokens,,) = IBalancerVault(unirouter).getPoolTokens(wantPoolId);
         swapKind = IBalancerVault.SwapKind.GIVEN_IN;
@@ -147,12 +148,12 @@ contract StrategyBeethovenxUST is StratManager, FeeManager {
     function chargeFees(address callFeeRecipient) internal {
         uint256 outputBal = IERC20(output).balanceOf(address(this)).mul(45).div(1000);
         if (outputBal > 0) {
-            balancerSwap(inputSwapPoolId, output, input, outputBal);
+            balancerSwap(wantPoolId, output, input, outputBal);
         }
         
         uint256 inputBal = IERC20(input).balanceOf(address(this));
         if (inputBal > 0) {
-            IUniswapRouterETH(spiritRouter).swapExactTokensForTokens(inputBal, 0, outputToNativeRoute, address(this), now);
+            IUniswapRouterETH(spiritRouter).swapExactTokensForTokens(inputBal, 0, inputToNativeRoute, address(this), now);
         }
         
         uint256 nativeBal = IERC20(native).balanceOf(address(this));
@@ -207,15 +208,16 @@ contract StrategyBeethovenxUST is StratManager, FeeManager {
 
     // returns rewards unharvested
     function rewardsAvailable() public view returns (uint256) {
-        return IBeethovenxChef(chef).pendingBeets(chefPoolId, address(this));
+        uint256 rewardBal = IBeetRewarder(rewarder).pendingToken(chefPoolId, address(this));
+        return rewardBal;
     }
 
     // native reward amount for calling harvest
-    function callReward() public returns (uint256) {
+    function callReward() public view returns (uint256) {
         uint256 outputBal = rewardsAvailable();
         uint256 nativeOut;
         if (outputBal > 0) {
-            uint256[] memory amountOut = IUniswapRouterETH(unirouter).getAmountsOut(outputBal, outputToNativeRoute);
+            uint256[] memory amountOut = IUniswapRouterETH(spiritRouter).getAmountsOut(outputBal, inputToNativeRoute);
             nativeOut = amountOut[amountOut.length -1];
         }
 
@@ -276,7 +278,7 @@ contract StrategyBeethovenxUST is StratManager, FeeManager {
         IERC20(input).safeApprove(unirouter, 0);
     }
 
-    function outputToNative() external view returns (address[] memory) {
-        return outputToNativeRoute;
+    function inputToNative() external view returns (address[] memory) {
+        return inputToNativeRoute;
     }
 }

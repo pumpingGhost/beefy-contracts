@@ -212,7 +212,13 @@ contract StrategySushiNativeDualLP is StratManager, FeeManager {
 
     // returns rewards unharvested
     function rewardsAvailable() public view returns (uint256) {
-        return IMiniChefV2(chef).pendingSushi(poolId, address(this));
+        uint256 pendingReward;
+        address rewarder = IMiniChefV2(chef).rewarder(poolId);
+        if (rewarder != address(0)) {
+            pendingReward = IRewarder(rewarder).pendingToken(poolId, address(this));
+        }
+
+        return pendingReward;
     }
 
     // native reward amount for calling harvest
