@@ -266,16 +266,16 @@ contract StrategyBeethovenxUST is StratManager, FeeManager {
 
     function _giveAllowances() internal {
         IERC20(want).safeApprove(chef, uint256(-1));
-        IERC20(output).safeApprove(spiritRouter, uint256(-1));
+        IERC20(input).safeApprove(spiritRouter, uint256(-1));
 
-        IERC20(input).safeApprove(unirouter, 0);
-        IERC20(input).safeApprove(unirouter, uint256(-1));
+        IERC20(output).safeApprove(unirouter, 0);
+        IERC20(output).safeApprove(unirouter, uint256(-1));
     }
 
     function _removeAllowances() internal {
         IERC20(want).safeApprove(chef, 0);
-        IERC20(output).safeApprove(spiritRouter, 0);
-        IERC20(input).safeApprove(unirouter, 0);
+        IERC20(input).safeApprove(spiritRouter, 0);
+        IERC20(output).safeApprove(unirouter, 0);
     }
 
     function inputToNative() external view returns (address[] memory) {

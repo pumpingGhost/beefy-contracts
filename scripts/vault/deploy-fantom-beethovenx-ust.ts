@@ -73,7 +73,7 @@ async function main() {
 
     // const predictedAddresses = await predictAddresses({ creator: deployer.address });
     
-    const predeployedStrategy = web3.utils.toChecksumAddress("0x5B14B7c97878B6BC509A05FC06cD37D24d91a45a");
+    const predeployedStrategy = web3.utils.toChecksumAddress("0x19AC7e5a17d2AfBCc8591800fbA389845F5C48C0");
 
     const vaultConstructorArguments = [
         predeployedStrategy,
