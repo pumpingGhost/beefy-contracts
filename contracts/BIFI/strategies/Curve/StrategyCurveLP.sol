@@ -7,8 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../../interfaces/common/IUniswapRouterETH.sol";
-import "../../interfaces/curve/IRewardsGauge.sol";
+import "../../interfaces/common/IWrappedNative.sol";
 import "../../interfaces/curve/ICurveSwap.sol";
+import "../../interfaces/curve/IGaugeFactory.sol";
+import "../../interfaces/curve/IRewardsGauge.sol";
 import "../Common/StratManager.sol";
 import "../Common/FeeManager.sol";
 import "../../utils/GasThrottler.sol";
@@ -24,11 +26,13 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
     address public depositToken;
 
     // Third party contracts
+    address public gaugeFactory;
     address public rewardsGauge;
     address public pool;
     uint public poolSize;
     uint public depositIndex;
     bool public useUnderlying;
+    bool public useMetapool;
 
     // Routes
     address[] public crvToNativeRoute;
@@ -48,11 +52,13 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
 
     constructor(
         address _want,
+        address _gaugeFactory,
         address _gauge,
         address _pool,
         uint _poolSize,
         uint _depositIndex,
         bool _useUnderlying,
+        bool _useMetapool,
         address[] memory _crvToNativeRoute,
         address[] memory _nativeToDepositRoute,
         address _vault,
@@ -62,11 +68,13 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
         address _beefyFeeRecipient
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
         want = _want;
+        gaugeFactory = _gaugeFactory;
         rewardsGauge = _gauge;
         pool = _pool;
         poolSize = _poolSize;
         depositIndex = _depositIndex;
         useUnderlying = _useUnderlying;
+        useMetapool = _useMetapool;
 
         crv = _crvToNativeRoute[0];
         native = _crvToNativeRoute[_crvToNativeRoute.length - 1];
@@ -76,6 +84,11 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
         require(_nativeToDepositRoute[0] == native, '_nativeToDepositRoute[0] != native');
         depositToken = _nativeToDepositRoute[_nativeToDepositRoute.length - 1];
         nativeToDepositRoute = _nativeToDepositRoute;
+
+        if (gaugeFactory != address(0)) {
+            harvestOnDeposit = true;
+            withdrawalFee = 0;
+        }
 
         _giveAllowances();
     }
@@ -128,6 +141,9 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
 
     // compounds earnings and charges performance fee
     function _harvest() internal {
+        if (gaugeFactory != address(0)) {
+            IGaugeFactory(gaugeFactory).mint(rewardsGauge);
+        }
         IRewardsGauge(rewardsGauge).claim_rewards(address(this));
         uint256 crvBal = IERC20(crv).balanceOf(address(this));
         uint256 nativeBal = IERC20(native).balanceOf(address(this));
@@ -161,31 +177,38 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
 
     // Adds liquidity to AMM and gets more LP tokens.
     function addLiquidity() internal {
+        uint256 depositBal;
+        uint256 depositNativeAmount;
         uint256 nativeBal = IERC20(native).balanceOf(address(this));
         if (depositToken != native) {
             IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, nativeToDepositRoute, address(this), block.timestamp);
+            depositBal = IERC20(depositToken).balanceOf(address(this));
+        } else {
+            depositBal = nativeBal;
+            depositNativeAmount = nativeBal;
+            IWrappedNative(native).withdraw(depositNativeAmount);
         }
-
-        uint256 depositBal = IERC20(depositToken).balanceOf(address(this));
 
         if (poolSize == 2) {
             uint256[2] memory amounts;
             amounts[depositIndex] = depositBal;
-            if (useUnderlying) ICurveSwap2(pool).add_liquidity(amounts, 0, true);
-            else ICurveSwap2(pool).add_liquidity(amounts, 0);
+            if (useUnderlying) ICurveSwap(pool).add_liquidity(amounts, 0, true);
+            else ICurveSwap(pool).add_liquidity{value: depositNativeAmount}(amounts, 0);
         } else if (poolSize == 3) {
             uint256[3] memory amounts;
             amounts[depositIndex] = depositBal;
-            if (useUnderlying) ICurveSwap3(pool).add_liquidity(amounts, 0, true);
-            else ICurveSwap3(pool).add_liquidity(amounts, 0);
+            if (useUnderlying) ICurveSwap(pool).add_liquidity(amounts, 0, true);
+            else if (useMetapool) ICurveSwap(pool).add_liquidity(want, amounts, 0);
+            else ICurveSwap(pool).add_liquidity(amounts, 0);
         } else if (poolSize == 4) {
             uint256[4] memory amounts;
             amounts[depositIndex] = depositBal;
-            ICurveSwap4(pool).add_liquidity(amounts, 0);
+            if (useMetapool) ICurveSwap(pool).add_liquidity(want, amounts, 0);
+            else ICurveSwap(pool).add_liquidity(amounts, 0);
         } else if (poolSize == 5) {
             uint256[5] memory amounts;
             amounts[depositIndex] = depositBal;
-            ICurveSwap5(pool).add_liquidity(amounts, 0);
+            ICurveSwap(pool).add_liquidity(amounts, 0);
         }
     }
 
@@ -204,11 +227,11 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
         return IRewardsGauge(rewardsGauge).balanceOf(address(this));
     }
 
-    function crvToNative() external view returns(address[] memory) {
+    function crvToNative() external view returns (address[] memory) {
         return crvToNativeRoute;
     }
 
-    function nativeToDeposit() external view returns(address[] memory) {
+    function nativeToDeposit() external view returns (address[] memory) {
         return nativeToDepositRoute;
     }
 
@@ -228,6 +251,11 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
 
     function setHarvestOnDeposit(bool _harvestOnDeposit) external onlyManager {
         harvestOnDeposit = _harvestOnDeposit;
+        if (harvestOnDeposit) {
+            setWithdrawalFee(0);
+        } else {
+            setWithdrawalFee(10);
+        }
     }
 
     // returns rewards unharvested
@@ -239,7 +267,7 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
     function callReward() public view returns (uint256) {
         uint256 outputBal = rewardsAvailable();
         uint256[] memory amountOut = IUniswapRouterETH(unirouter).getAmountsOut(outputBal, crvToNativeRoute);
-        uint256 nativeOut = amountOut[amountOut.length -1];
+        uint256 nativeOut = amountOut[amountOut.length - 1];
 
         return nativeOut.mul(45).div(1000).mul(callFee).div(MAX_FEE);
     }
@@ -291,4 +319,6 @@ contract StrategyCurveLP is StratManager, FeeManager, GasThrottler {
         IERC20(crv).safeApprove(crvRouter, 0);
         IERC20(depositToken).safeApprove(pool, 0);
     }
+
+    receive () external payable {}
 }

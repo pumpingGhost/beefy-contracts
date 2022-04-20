@@ -37,6 +37,7 @@ contract StrategyStargateStaking is StratManager, FeeManager, GasThrottler {
     // Routes
     address[] public outputToNativeRoute;
     address[] public outputToLp0Route;
+    address[] public outputToLp1Route;
 
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);

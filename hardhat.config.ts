@@ -3,7 +3,7 @@ import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
-import "@typechain/hardhat";
+// import "@typechain/hardhat";
 import "./tasks";
 
 import { HardhatUserConfig } from "hardhat/src/types/config";
@@ -24,54 +24,53 @@ const config: DeploymentConfig = {
       accounts: hardhatNetworkAccounts,
     },
     bsc: {
-      url: "https://bsc-dataseed2.defibit.io/",
+      url: process.env.BSC_RPC || "https://bsc-dataseed2.defibit.io/",
       chainId: 56,
       accounts,
     },
     heco: {
-      url: "https://http-mainnet-node.huobichain.com",
+      url: process.env.HECO_RPC || "https://http-mainnet-node.huobichain.com",
       chainId: 128,
       accounts,
     },
     avax: {
-      url: "https://api.avax.network/ext/bc/C/rpc",
+      url: process.env.AVAX_RPC || "https://rpc.ankr.com/avalanche",
       chainId: 43114,
       accounts,
     },
     polygon: {
-      // url: "https://speedy-nodes-nyc.moralis.io/1a92fabc9eec27037883583a/polygon/mainnet/archive",
-      url: "https://polygon-rpc.com/",
+      url: process.env.POLYGON_RPC || "https://polygon-rpc.com/",
       chainId: 137,
       accounts,
     },
     fantom: {
-      url: "https://rpc.ftm.tools",
+      url: process.env.FANTOM_RPC || "https://rpc.ftm.tools",
       chainId: 250,
       accounts,
     },
     one: {
-      url: "https://api.s0.t.hmny.io/",
+      url: process.env.ONE_RPC || "https://api.s0.t.hmny.io/",
       chainId: 1666600000,
       accounts,
     },
     arbitrum: {
-      url: "https://arb1.arbitrum.io/rpc",
+      url: process.env.ARBITRUM_RPC || "https://arb1.arbitrum.io/rpc",
       chainId: 42161,
       accounts,
     },
     moonriver: {
-      url: "https://rpc.moonriver.moonbeam.network",
+      url: process.env.MOONRIVER_RPC || "https://rpc.moonriver.moonbeam.network",
       chainId: 1285,
       accounts,
     },
     celo: {
-      url: "https://forno.celo.org",
+      url: process.env.CELO_RPC || "https://forno.celo.org",
       chainId: 42220,
       accounts,
     },
     cronos: {
       // url: "https://evm-cronos.crypto.org",
-      url: "https://rpc.vvs.finance/",
+      url: process.env.CRONOS_RPC || "https://rpc.vvs.finance/",
       chainId: 25,
       accounts,
     },
@@ -91,22 +90,22 @@ const config: DeploymentConfig = {
       accounts,
     },
     aurora: {
-      url: "https://mainnet.aurora.dev/Fon6fPMs5rCdJc4mxX4kiSK1vsKdzc3D8k6UF8aruek",
+      url: process.env.AURORA_RPC || "https://mainnet.aurora.dev/Fon6fPMs5rCdJc4mxX4kiSK1vsKdzc3D8k6UF8aruek",
       chainId: 1313161554,
       accounts,
     },
     fuse: {
-      url: "https://rpc.fuse.io",
+      url: process.env.FUSE_RPC || "https://rpc.fuse.io",
       chainId: 122,
       accounts,
     },
     metis: {
-      url: "https://andromeda.metis.io/?owner=1088",
+      url: process.env.METIS_RPC || "https://andromeda.metis.io/?owner=1088",
       chainId: 1088,
       accounts,
     },
     moonbeam: {
-      url: "https://rpc.api.moonbeam.network",
+      url: process.env.MOONBEAM_RPC || "https://rpc.api.moonbeam.network",
       chainId: 1284,
       accounts,
     },
@@ -114,7 +113,7 @@ const config: DeploymentConfig = {
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: "A8IR41DK4EVQDGWACH3WK2YI5YEYG6FQ5B",
+    apiKey: process.env.API_KEY,
   },
   solidity: {
     compilers: [
