@@ -9,44 +9,48 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: {  solarflare, beefyfinance },
+  platforms: {  pancake, beefyfinance },
   tokens: {
-    FLARE: { address: FLARE },
-    GLMR: { address: GLMR },
-    UST: { address: UST },
-    LUNA: { address: LUNA },
+    BNB: { address: BNB },
+    CAKE: { address: CAKE },
+    DAI: { address: DAI },
+    BUSD: { address: BUSD },
     USDT: { address: USDT },
-    USDC: { address: USDC }
+    USDC: { address: USDC },
+    LINK: { address: LINK},
+    SXP: { address: SXP }
   },
-} = addressBook.moonbeam;
+} = addressBook.bsc;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x26A2abD79583155EA5d34443b62399879D42748A");
+const want = web3.utils.toChecksumAddress("0x0eD7e52944161450477ee417DE9Cd3a859b14fD0");
+const ensId = ethers.utils.formatBytes32String("cake.eth");
 
 const vaultParams = {
-  mooName: "Moo Solarflare FLARE-GLMR",
-  mooSymbol: "mooSolarflareFLARE-GLMR",
+  mooName: "Moo Test",
+  mooSymbol: "mooTest",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 0,
-  chef: solarflare.masterchef,
-  unirouter: solarflare.router,
-  strategist: "0xb2e4A61D99cA58fB8aaC58Bb2F8A59d63f552fC0", // some address
+  poolId: 2,
+  chef: "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652", //pancake.masterchef,
+  unirouter: pancake.router,
+  strategist: "0x4cC72219fc8aEF162FC0c255D9B9C3Ff93B10882", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [FLARE, GLMR],
-  outputToLp0Route: [FLARE, GLMR],
-  outputToLp1Route: [FLARE],
+  outputToNativeRoute: [CAKE, BNB],
+  outputToLp0Route: [CAKE],
+  outputToLp1Route: [CAKE, BNB],
+  ensId
  // pendingRewardsFunctionName: "pendingTri", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategySolarbeamV2",
+  strategy: "StrategyCommonChefLPVoter",
 };
 
 async function main() {
@@ -91,6 +95,7 @@ async function main() {
     strategyParams.outputToNativeRoute,
     strategyParams.outputToLp0Route,
     strategyParams.outputToLp1Route,
+    strategyParams.ensId
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();

@@ -8,39 +8,39 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { quickswap, beefyfinance },
+  platforms: { pancake, beefyfinance },
   tokens: {
-    beFTM: { address: beFTM },
-    FTM: { address: FTM },
+    CAKE: { address: CAKE },
+    BNB: { address: BNB },
   },
-} = addressBook.fantom;
+} = addressBook.bsc;
 
 const shouldVerifyOnEtherscan = false;
 
-const rewardPool = web3.utils.toChecksumAddress("0xE00D25938671525C2542A689e42D1cfA56De5888");
-const lp = web3.utils.toChecksumAddress("0x7381eD41F6dE418DdE5e84B55590422a57917886");
+const rewardPool = web3.utils.toChecksumAddress("0x49fAfAA2d9E32A6Af37A11cEeC50D76A772390Cc");
+const lp = web3.utils.toChecksumAddress("0x42b50A901228fb4C739C19fcd38DC2182B515B66");
 
 const vaultParams = {
-  mooName: "Moo beFTM",
-  mooSymbol: "moobeFTM",
+  mooName: "Moo beCAKE",
+  mooSymbol: "moobeCAKE",
   delay: 21600,
 };
 
 const strategyParams = {
   want: lp,
   rewardPool: rewardPool,
-  unirouter: "0xa38cd27185a464914D3046f0AB9d43356B34829D",
+  unirouter: pancake.router,
   strategist: "0xb2e4A61D99cA58fB8aaC58Bb2F8A59d63f552fC0", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [FTM],
-  outputToLp0Route: [FTM, beFTM],
- // outputToLp1Route: [QUICK, MATIC, MAI],
+  outputToNativeRoute: [CAKE, BNB],
+ // outputToLp0Route: [WMATIC],
+ // outputToLp1Route: [WMATIC, MaticX],
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyCommonRewardPool",
+  strategy: "StrategybeTokenRewardPool",
 };
 
 async function main() {
@@ -82,8 +82,8 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-//   strategyParams.outputToLp1Route,
+   // strategyParams.outputToLp0Route,
+   // strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
@@ -107,6 +107,8 @@ async function main() {
     );
   }
   await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
+  console.log(`Transfering Vault Owner to ${beefyfinance.vaultOwner}`)
+  await vault.transferOwnership(beefyfinance.vaultOwner);
   console.log();
 
   await Promise.all(verifyContractsPromises);
