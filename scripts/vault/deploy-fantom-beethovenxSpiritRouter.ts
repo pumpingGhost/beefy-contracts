@@ -12,41 +12,39 @@ const {
     tokens: {
         FTM: { address: FTM },
         BEETS: { address: BEETS },
-        USDC: { address: USDC },
+        DAI: { address: DAI },
+        USDC: { address: USDC}
     },
 } = addressBook.fantom;
 
 const shouldVerifyOnEtherscan = false;
 
-const DEUS = web3.utils.toChecksumAddress("0xDE5ed76E7c05eC5e4572CfC88d1ACEA165109E44");
+const FHM = web3.utils.toChecksumAddress("0xfa1fbb8ef55a4855e5688c0ee13ac3f202486286");
 
 // TODO
 const vaultParams = {
-    mooName: "Moo Beet God Between Two Stables",
-    mooSymbol: "mooBeetGodBetweenTwoStables",
+    mooName: "Moo Beet From gods, boosted and blessed",
+    mooSymbol: "mooBeetFromgodsBoostedAndBlessed",
     delay: 21600,
 };
 
 const strategyParams = {
     // TODO: wantPoolId(hex), nativeSwapPoolId, inputSwapPoolId
-    balancerPoolIds: ["0x8b858eaf095a7337de6f9bc212993338773ca34e00020000000000000000023c", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019"],
-    chefPoolId: 67, // TODO
+    balancerPoolIds: ["0xdfc65c1f15ad3507754ef0fd4ba67060c108db7e000000000000000000000406", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019"],
+    chefPoolId: 83, // TODO
     chef: "0x8166994d9ebBe5829EC86Bd81258149B87faCfd3",
     unirouter: "0x20dd72Ed959b6147912C2e529F0a0C651c33c9ce", // Beethoven master vault
     keeper: beefyfinance.keeper,
-    strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E",
+    strategist: "0xB189ad2658877C4c63E07480CB680AfE8c192412",
     beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-    secondOutputToNativeRoute: [DEUS, FTM], // ["0xDE5ed76E7c05eC5e4572CfC88d1ACEA165109E44", "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83"]
+    secondOutputToNativeRoute: [FTM], // ["0xDE5ed76E7c05eC5e4572CfC88d1ACEA165109E44", "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83"]
     nativeToInputRoute: [FTM, USDC], // ["0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83", "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75"]
 };
 
 
-// FTM-BEETS: 0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019
-// ["0x66bcb58cf9754f421c268990b280e4462e10aac8000200000000000000000339", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019", "0xcde5a11a4acb4ee4c805352cec57e236bdbc3837000200000000000000000019"]
-
 const contractNames = {
     vault: "BeefyVaultV6",
-    strategy: "StrategyBeethovenxSpiritRouter",
+    strategy: "StrategyBeethovenxMultiRouter",
 };
 
 async function main() {
@@ -70,7 +68,7 @@ async function main() {
 
     // const predictedAddresses = await predictAddresses({ creator: deployer.address });
     
-    const predeployedStrategy = web3.utils.toChecksumAddress("0x62159EAae3Cec9a447AEf1d0400c8596AC9FDA27");
+    const predeployedStrategy = web3.utils.toChecksumAddress("0x40568A63A04d5f6788509dB8706DB49AE82a7d1e");
 
     const vaultConstructorArguments = [
         predeployedStrategy,

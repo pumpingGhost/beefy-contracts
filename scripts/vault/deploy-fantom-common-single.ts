@@ -42,7 +42,7 @@ const strategyParams = {
   poolId: 3, // TODO
   chef: "0xa058316Af6275137B3450C9C9A4022dE6482BaC2",   // Ripae Rewarder
   unirouter: spookyswap.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
+  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [PAE, FTM], // TODO

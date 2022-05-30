@@ -35,7 +35,7 @@ const strategyParams = {
   want,
   rewardPool: "0x411b772B9eb19a33E7af5fCD9B1629D2015DC886", // TODO
   unirouter: quickswap.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
+  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // dev
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [QUICK, MATIC],

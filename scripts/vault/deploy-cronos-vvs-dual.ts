@@ -19,37 +19,34 @@ const {
 const shouldVerifyOnEtherscan = false;
 
 const ALI = web3.utils.toChecksumAddress("0x45C135C1CDCE8d25A3B729A28659561385C52671");
-const BNB = web3.utils.toChecksumAddress("0x6acb34b1Df86E254b544189Ec32Cf737e2482058");
-const fUSD = web3.utils.toChecksumAddress("0x249BE57637D8B013Ad64785404b24aeBaE9B098B");
+// const VVS = web3.utils.toChecksumAddress("0x2D03bECE6747ADC00E1a131BBA1469C15fD11e03");
+const VERSA = web3.utils.toChecksumAddress("0x00D7699b71290094CcB1a5884cD835bD65a78c17");
 const WBTC = web3.utils.toChecksumAddress("0x33284f95ccb7B948d9D352e1439561CF83d8d00d");
 const WETH = web3.utils.toChecksumAddress("0xa722c13135930332Eb3d749B2F0906559D2C5b99");
 const UST = web3.utils.toChecksumAddress("0x0D58a44be3dCA0aB449965dcc2c46932547Fea2f");
-const GoodDollar = web3.utils.toChecksumAddress("0x495d133B938596C9984d462F007B676bDc57eCEC");
-const BUSD = web3.utils.toChecksumAddress("0x6a5F6A8121592BeCd6747a38d67451B310F7f156");
-const USDC = web3.utils.toChecksumAddress("0x620fd5fa44BE6af63715Ef4E65DDFA0387aD13F5");
-const agEUR = web3.utils.toChecksumAddress("0xeFAeeE334F0Fd1712f9a8cc375f427D9Cdd40d73");
 
-const want = web3.utils.toChecksumAddress("0x78082d9Dee5FDD53dF3b16292077Ee2F6D31F7DE"); // TODO
+
+const want = web3.utils.toChecksumAddress("0xD7F3d8035cd7BD5aD5E43Fa4E1d4DcA12e133FdD"); // TODO
 
 // TODO
 const vaultParams = {
-  mooName: "Moo VVS CRO-ALI",
-  mooSymbol: "mooVvsCRO-ALI",
+  mooName: "Moo VVS VVS-VERSA",
+  mooSymbol: "mooVvsVVS-VERSA",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 22, // TODO
+  poolId: 30, // TODO
   chef: "0xbc149c62EFe8AFC61728fC58b1b66a0661712e76",
   unirouter: vvs.router,
   strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [VVS, CRO], // TODO
-  secondOutputToNativeRoute: [ALI, CRO], // TODO
-  nativeToLp0Route: [CRO, ALI], // TODO
-  nativeToLp1Route: [CRO], // TODO
+  secondOutputToNativeRoute: [VERSA, VVS, CRO], // TODO
+  nativeToLp0Route: [CRO, VVS, VERSA], // TODO
+  nativeToLp1Route: [CRO, VVS], // TODO
 };
 
 const contractNames = {

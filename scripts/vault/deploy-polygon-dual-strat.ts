@@ -20,27 +20,27 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x7E02A82a9F2b96eE2836c5C64c44e0aB13020f4b"); // LP addr
-const BICO = web3.utils.toChecksumAddress("0x91c89A94567980f0e9723b487b0beD586eE96aa7");
-// const DQUICK = web3.utils.toChecksumAddress("0xf28164a485b0b2c90639e47b0f377b4a438a16b1")
+const want = web3.utils.toChecksumAddress("0x65752C54D9102BDFD69d351E1838A1Be83C924C6"); // LP addr
+const stMATIC = web3.utils.toChecksumAddress("0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4");
+const LDO = web3.utils.toChecksumAddress("0xC3C7d422809852031b44ab29EEC9F1EfF2A58756")
 
 const vaultParams = {
-  mooName: "Moo QuickSwap BICO-ETH",
-  mooSymbol: "mooQuickSwapBICO-ETH",
+  mooName: "Moo QuickSwap stMATIC-MATIC",
+  mooSymbol: "mooQuickSwapstMATIC-MATIC",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  rewardPool: "0x3C943fB971BCaB9C4919e5FA71612655Ebd663e5",
+  rewardPool: "0x8ECbc9B0741C000fd7aaE9cb559e5eEe1D1883F3",
   unirouter: quickswap.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // dev
+  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // dev
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   output0ToNativeRoute: [QUICK, MATIC], // ["0x831753DD7087CaC61aB5644b308642cc1c33Dc13", "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"]
-  output1ToNativeRoute: [BICO, ETH, MATIC],
-  nativeToLp0Route: [MATIC, ETH],
-  nativeToLp1Route: [MATIC, ETH, BICO],
+  output1ToNativeRoute: [LDO, MATIC],
+  nativeToLp0Route: [MATIC],
+  nativeToLp1Route: [MATIC, stMATIC],
 };
 
 const contractNames = {

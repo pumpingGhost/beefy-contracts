@@ -42,7 +42,7 @@ const strategyParams = {
   poolId: 12,
   chef: "0xE3e184a7b75D0Ae6E17B58F5283b91B4E0A2604F",
   unirouter: "0xE3F85aAd0c8DD7337427B9dF5d0fB741d65EEEB5",
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
+  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [VOLT, FUSE],

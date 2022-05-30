@@ -43,7 +43,7 @@ const strategyParams = {
   poolId: 5,
   chef: sushiFuse.minichef,
   unirouter: sushiFuse.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
+  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [SUSHI, FUSE], // will not be swapped if SUSHI < 0, but some route is required to satisfy constructor args.

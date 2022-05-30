@@ -2,56 +2,52 @@ import hardhat, { ethers, web3 } from "hardhat";
 import { addressBook } from "blockchain-addressbook";
 import { predictAddresses } from "../../utils/predictAddresses";
 import { setCorrectCallFee } from "../../utils/setCorrectCallFee";
+import { setPendingRewardsFunctionName } from "../../utils/setPendingRewardsFunctionName";
 import { verifyContract } from "../../utils/verifyContract";
 import { BeefyChain } from "../../utils/beefyChain";
 
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { joe, beefyfinance },
+  platforms: { spiritswap, beefyfinance },
   tokens: {
-    PNG: { address: PNG },
-    MIM: { address: MIM },
-    AVAX: { address: AVAX },
-    USDCe: { address: USDCe },
-    DAIe: { address: DAIe },
-    TIME: { address: TIME },
-    SPELL: { address: SPELL },
-    XAVA: { address: XAVA },
-    JOE: { address: JOE },
+    BTC: { address: BTC },
+    ETH: { address: ETH },
+    BOO: { address: BOO },
+    FTM: { address: FTM },
+    SPIRIT: { address: SPIRIT },
   },
-} = addressBook.avax;
+} = addressBook.fantom;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x939D6eD8a0f7FC90436BA6842D7372250a03fA7c"); // TODO
-const FIEF = web3.utils.toChecksumAddress("0xeA068Fba19CE95f12d252aD8Cb2939225C4Ea02D")
-const FEED = web3.utils.toChecksumAddress("0xab592d197ACc575D16C3346f4EB70C703F308D1E")
+const want = web3.utils.toChecksumAddress("0x72133BBff5072616E165237e69b3F4c87C1a94e8"); // TODO
+const sFTMx = web3.utils.toChecksumAddress("0xd7028092c830b5C8FcE061Af2E593413EbbC1fc1");
+const UST = web3.utils.toChecksumAddress("0x846e4D51d7E2043C1a87E0Ab7490B93FB940357b");
+const SD = web3.utils.toChecksumAddress("0x412a13C109aC30f0dB80AD3Bd1DeFd5D0A6c0Ac6");
 
-// TODO
 const vaultParams = {
-  mooName: "Moo Joe EGG-AVAX", 
-  mooSymbol: "mooJoeEGG-AVAX",
+  mooName: "Moo Spirit sFTMx-FTM", // TODO
+  mooSymbol: "mooSpiritsFTMx-FTM", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 32, // TODO
-  chef: joe.masterchefV3,
-  unirouter: joe.router,
-  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
+  gauge: "0x3A3C0449FDd642Dd9Bb714B5B8F90D7f198A0024", // TODO
+  gaugeStaker: "0x44e314190D9E4cE6d4C0903459204F8E21ff940A",
+  unirouter: spiritswap.router,
+  strategist: "0xB189ad2658877C4c63E07480CB680AfE8c192412", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [JOE, AVAX],
-  secondOutputToNativeRoute: [AVAX],
-  nativeToLp0Route: [AVAX], // TODO
-  nativeToLp1Route: [AVAX, FIEF], // TODO
+  outputToNativeRoute: [SPIRIT, FTM], // TODO
+  outputToLp0Route: [SPIRIT, FTM], // TODO
+  outputToLp1Route: [SPIRIT, FTM, sFTMx], // TODO
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyTraderJoeDualNonNativeLP",
+  strategy: "StrategyGaugeLP",
 };
 
 async function main() {
@@ -64,6 +60,7 @@ async function main() {
     return;
   }
 
+  
   await hardhat.run("compile");
 
   const Vault = await ethers.getContractFactory(contractNames.vault);
@@ -86,27 +83,25 @@ async function main() {
 
   const strategyConstructorArguments = [
     strategyParams.want,
-    strategyParams.poolId,
-    strategyParams.chef,
+    strategyParams.gauge,
+    strategyParams.gaugeStaker,
     vault.address,
     strategyParams.unirouter,
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.secondOutputToNativeRoute,
-    strategyParams.nativeToLp0Route,
-    strategyParams.nativeToLp1Route,
+    strategyParams.outputToLp0Route,
+    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
 
   // add this info to PR
-  console.log();
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
-  console.log("PoolId:", strategyParams.poolId);
+  console.log("gauge:", strategyParams.gauge);
 
   console.log();
   console.log("Running post deployment");
@@ -115,20 +110,13 @@ async function main() {
   if (shouldVerifyOnEtherscan) {
     // skip await as this is a long running operation, and you can do other stuff to prepare vault while this finishes
     verifyContractsPromises.push(
-      verifyContract(vault.address, vaultConstructorArguments),
+      // verifyContract(vault.address, vaultConstructorArguments),
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
- // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain); // prefer to do it manually
   console.log();
 
   await Promise.all(verifyContractsPromises);
-
-  if (hardhat.network.name === "bsc") {
-    await registerSubsidy(vault.address, deployer);
-    await registerSubsidy(strategy.address, deployer);
-  }
 }
 
 main()

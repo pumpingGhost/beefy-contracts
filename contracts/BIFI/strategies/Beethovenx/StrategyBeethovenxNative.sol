@@ -7,13 +7,12 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "../../interfaces/common/IUniswapRouterETH.sol";
 import "../../interfaces/beethovenx/IBeethovenxChef.sol";
 import "../../interfaces/beethovenx/IBalancerVault.sol";
 import "../Common/StratManager.sol";
 import "../Common/FeeManager.sol";
 
-contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
+contract StrategyBeethovenxNative is StratManager, FeeManager {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -21,9 +20,7 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
     address public want;
     address public output = address(0xF24Bcf4d1e507740041C9cFd2DddB29585aDCe1e);
     address public native = address(0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83);
-    address public spiritRouter = address(0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52);
     address public input;
-    address public secondOutput;
     address[] public lpTokens;
 
     // Third party contracts
@@ -31,10 +28,7 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
     uint256 public chefPoolId;
     bytes32 public wantPoolId;
     bytes32 public nativeSwapPoolId;
-
-    // Routes
-    address[] public secondOutputToNativeRoute;
-    address[] public nativeToInputRoute;
+    bytes32 public inputSwapPoolId;
 
     IBalancerVault.SwapKind public swapKind;
     IBalancerVault.FundManagement public funds;
@@ -50,27 +44,21 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
         bytes32[] memory _balancerPoolIds,
         uint256 _chefPoolId,
         address _chef,
+        address _input,
         address _vault,
         address _unirouter,
         address _keeper,
         address _strategist,
-        address _beefyFeeRecipient,
-        address[] memory _secondOutputToNativeRoute,
-        address[] memory _nativeToInputRoute
+        address _beefyFeeRecipient
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
         wantPoolId = _balancerPoolIds[0];
         nativeSwapPoolId = _balancerPoolIds[1];
+        inputSwapPoolId = _balancerPoolIds[2];
         chefPoolId = _chefPoolId;
         chef = _chef;
-        secondOutput = _secondOutputToNativeRoute[0];
-        secondOutputToNativeRoute = _secondOutputToNativeRoute;
-        nativeToInputRoute = _nativeToInputRoute;
-        input = _nativeToInputRoute[_nativeToInputRoute.length -1];
-
-        require(_secondOutputToNativeRoute[_secondOutputToNativeRoute.length - 1] == native, "_secondOutputToNativeRoute[last] != native");
-        require(_nativeToInputRoute[0] == native, "_nativeToInputRoute[0] != native");
 
         (want,) = IBalancerVault(unirouter).getPool(wantPoolId);
+        input = _input;
 
         (lpTokens,,) = IBalancerVault(unirouter).getPoolTokens(wantPoolId);
         swapKind = IBalancerVault.SwapKind.GIVEN_IN;
@@ -136,8 +124,7 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
     function _harvest(address callFeeRecipient) internal whenNotPaused {
         IBeethovenxChef(chef).harvest(chefPoolId, address(this));
         uint256 outputBal = IERC20(output).balanceOf(address(this));
-        uint256 secondOutputBal = IERC20(secondOutput).balanceOf(address(this));
-        if (outputBal > 0 || secondOutputBal > 0) {
+        if (outputBal > 0) {
             chargeFees(callFeeRecipient);
             addLiquidity();
             uint256 wantHarvested = balanceOfWant();
@@ -151,15 +138,9 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
     // performance fees
     function chargeFees(address callFeeRecipient) internal {
         uint256 toNative = IERC20(output).balanceOf(address(this));
-        if (toNative > 0) {
-            balancerSwap(nativeSwapPoolId, output, native, toNative);
-        }
-        
-        toNative = IERC20(secondOutput).balanceOf(address(this));
-        if (toNative > 0) {
-            IUniswapRouterETH(spiritRouter).swapExactTokensForTokens(toNative, 0, secondOutputToNativeRoute, address(this), now);
-        }
-        
+
+        balancerSwap(nativeSwapPoolId, output, native, toNative);
+
         uint256 nativeBal = IERC20(native).balanceOf(address(this)).mul(45).div(1000);
 
         uint256 callFeeAmount = nativeBal.mul(callFee).div(MAX_FEE);
@@ -174,8 +155,10 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
 
     // Adds liquidity to AMM and gets more LP tokens.
     function addLiquidity() internal {
-        uint256 nativeBal = IERC20(native).balanceOf(address(this));
-        IUniswapRouterETH(spiritRouter).swapExactTokensForTokens(nativeBal, 0, nativeToInputRoute, address(this), now);
+        if (input != native) {
+            uint256 nativeBal = IERC20(native).balanceOf(address(this));
+            balancerSwap(inputSwapPoolId, native, input, nativeBal);
+        }
 
         uint256 inputBal = IERC20(input).balanceOf(address(this));
         balancerJoin(wantPoolId, input, inputBal);
@@ -273,10 +256,7 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
     function _giveAllowances() internal {
         IERC20(want).safeApprove(chef, uint256(-1));
         IERC20(output).safeApprove(unirouter, uint256(-1));
-        IERC20(secondOutput).safeApprove(spiritRouter, uint256(-1));
-        if (secondOutput != native) {
-            IERC20(native).safeApprove(spiritRouter, uint256(-1));
-        }
+        IERC20(native).safeApprove(unirouter, uint256(-1));
 
         IERC20(input).safeApprove(unirouter, 0);
         IERC20(input).safeApprove(unirouter, uint256(-1));
@@ -285,8 +265,7 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
     function _removeAllowances() internal {
         IERC20(want).safeApprove(chef, 0);
         IERC20(output).safeApprove(unirouter, 0);
-        IERC20(secondOutput).safeApprove(spiritRouter, 0);
-        IERC20(native).safeApprove(spiritRouter, 0);
+        IERC20(native).safeApprove(unirouter, 0);
         IERC20(input).safeApprove(unirouter, 0);
     }
 
@@ -294,11 +273,7 @@ contract StrategyBeethovenxSpiritRouter is StratManager, FeeManager {
         return nativeSwapPoolId;
     }
 
-    function secondOutputToNative() external view returns (address[] memory) {
-        return secondOutputToNativeRoute;
-    }
-
-    function nativeToInput() external view returns (address[] memory) {
-        return nativeToInputRoute;
+    function inputSwapPool() external view returns (bytes32) {
+        return inputSwapPoolId;
     }
 }

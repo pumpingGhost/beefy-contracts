@@ -16,13 +16,14 @@ const {
     BOO: { address: BOO },
     FTM: { address: FTM },
     USDC: { address: USDC },
+    BSHARE: { address: BSHARE}
   },
 } = addressBook.fantom;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x656b3264695690322ACBad95F994b51C5a8C8eDF"); // TODO
-const MvDollar = web3.utils.toChecksumAddress("0x57976c467608983513c9355238dc6de1B1aBbcCA");
+const want = web3.utils.toChecksumAddress("0x7c849a7E2cb08f09cf37482cc0A04ecB5891844a"); // TODO
+const BASED = web3.utils.toChecksumAddress("0x8D7d3409881b51466B483B11Ea1B8A03cdEd89ae");
 const MSHARE = web3.utils.toChecksumAddress("0xb011EC534d9175cD7a69aFBfc1bcc9990862c462");
 // const USDC = web3.utils.toChecksumAddress("0x04068DA6C83AFCFA0e13ba15A6696662335D5B75");
 const LUNA = web3.utils.toChecksumAddress("0x593AE1d34c8BD7587C11D539E4F42BFf242c82Af");
@@ -30,23 +31,23 @@ const UST = web3.utils.toChecksumAddress("0x846e4D51d7E2043C1a87E0Ab7490B93FB940
 const TOMB = web3.utils.toChecksumAddress("0x6c021Ae822BEa943b2E66552bDe1D2696a53fbB7");
 
 const vaultParams = {
-  mooName: "Moo Spooky FTM-UST", // TODO
-  mooSymbol: "mooSpookyFTM-UST", // TODO
+  mooName: "Moo Based BASED-USDC", // TODO
+  mooSymbol: "mooBasedBASED-USDC", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 76, // TODO
-  chef: spookyswap.masterchef,
+  poolId: 8, // TODO
+  chef: "0xAc0fa95058616D7539b6Eecb6418A68e7c18A746",
   unirouter: spookyswap.router,
-  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
+  strategist: "0xB189ad2658877C4c63E07480CB680AfE8c192412", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [BOO, FTM], // TODO
-  outputToLp0Route: [BOO, FTM], // TODO
-  outputToLp1Route: [BOO, FTM, UST], // TODO
-  pendingRewardsFunctionName: "pendingBOO", // used for rewardsAvailable(), use correct function name from masterchef
+  outputToNativeRoute: [BSHARE, FTM], // TODO
+  outputToLp0Route: [BSHARE, FTM, USDC], // TODO
+  outputToLp1Route: [BSHARE, FTM, USDC, BASED], // TODO
+  pendingRewardsFunctionName: "pendingShare", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {

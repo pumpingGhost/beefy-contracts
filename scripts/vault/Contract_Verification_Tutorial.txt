@@ -1,7 +1,6 @@
-1.) Go to package.json (in this repo)
-2.) Fill in the path to the right strategy for the command "yarn flat-hardhat", then run the command
+1.) Go to package.json (in this repo) 2.) Fill in the path to the right strategy for the command "yarn flat-hardhat", then run the command 
 3.) Go to the file tmp/flattened.sol
-4.) Copy the line with the license declaration (3rd line) and put it into CMD+F. Then replace all occurences with an empty string
-5.) Replace line 1 with the license declaration.
+4.) Copy the line with the license declaration (3rd line) and put it into CMD+F. Then replace all occurences with an empty string 
+5.) Replace line 1 with the license declaration. 
 6.) Copy the whole flattened.sol file contents and paste it into the verification form on the explorer (first field)
 7.) Use solidity version 0.6.12, MIT license, optimization yes, Try to fetch constructor arguments automatically yes; Contract name is strategy name

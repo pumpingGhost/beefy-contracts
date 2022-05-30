@@ -2,56 +2,51 @@ import hardhat, { ethers, web3 } from "hardhat";
 import { addressBook } from "blockchain-addressbook";
 import { predictAddresses } from "../../utils/predictAddresses";
 import { setCorrectCallFee } from "../../utils/setCorrectCallFee";
+import { setPendingRewardsFunctionName } from "../../utils/setPendingRewardsFunctionName";
 import { verifyContract } from "../../utils/verifyContract";
 import { BeefyChain } from "../../utils/beefyChain";
 
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { joe, beefyfinance },
+  platforms: { biswap, beefyfinance },
   tokens: {
-    PNG: { address: PNG },
-    MIM: { address: MIM },
-    AVAX: { address: AVAX },
-    USDCe: { address: USDCe },
-    DAIe: { address: DAIe },
-    TIME: { address: TIME },
-    SPELL: { address: SPELL },
-    XAVA: { address: XAVA },
-    JOE: { address: JOE },
+   // USDC: { address: USDC },
+    //USDT: { address: USDT },
   },
-} = addressBook.avax;
+} = addressBook.bsc;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x939D6eD8a0f7FC90436BA6842D7372250a03fA7c"); // TODO
-const FIEF = web3.utils.toChecksumAddress("0xeA068Fba19CE95f12d252aD8Cb2939225C4Ea02D")
-const FEED = web3.utils.toChecksumAddress("0xab592d197ACc575D16C3346f4EB70C703F308D1E")
+const want = web3.utils.toChecksumAddress("0x8eA4875469e8Fd7ad3790b4c7DEeF768ca1e806f"); // TODO
+const pBNB = web3.utils.toChecksumAddress("0xA2315cC5A1e4aE3D0a491ED4Fe45EBF8356fEaC7");
+const PAE = web3.utils.toChecksumAddress("0x6c7fc3Fd4a9f1Cfa2a69B83F92b9DA7EC26240A2");
+const CAKE = web3.utils.toChecksumAddress("0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82");
+const BNB = web3.utils.toChecksumAddress("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c");  
 
-// TODO
 const vaultParams = {
-  mooName: "Moo Joe EGG-AVAX", 
-  mooSymbol: "mooJoeEGG-AVAX",
+  mooName: "Moo Ripae PAE-BNB", // TODO
+  mooSymbol: "MooRipaepPAE-BNB", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 32, // TODO
-  chef: joe.masterchefV3,
-  unirouter: joe.router,
-  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
+  poolId: 1, // TODO
+  chef: "0x18A5aefA5a6B20FeEeF0a3AabF876c813b04dB3d",
+  unirouter: "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
+  strategist: "0x22e3709Cf6476d67F468F29E4dE2051ED53747A4", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [JOE, AVAX],
-  secondOutputToNativeRoute: [AVAX],
-  nativeToLp0Route: [AVAX], // TODO
-  nativeToLp1Route: [AVAX, FIEF], // TODO
+  outputToNativeRoute: [PAE, BNB], //TODO
+  outputToLp0Route: [PAE], // TODO
+  outputToLp1Route: [PAE, BNB], // TODO
+  pendingRewardsFunctionName: "pendingPAE", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyTraderJoeDualNonNativeLP",
+  strategy: "StrategyCommonChefLP",
 };
 
 async function main() {
@@ -94,15 +89,13 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.secondOutputToNativeRoute,
-    strategyParams.nativeToLp0Route,
-    strategyParams.nativeToLp1Route,
+    strategyParams.outputToLp0Route,
+    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
 
-  // add this info to PR
-  console.log();
+  //add this info to PR
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
@@ -115,20 +108,15 @@ async function main() {
   if (shouldVerifyOnEtherscan) {
     // skip await as this is a long running operation, and you can do other stuff to prepare vault while this finishes
     verifyContractsPromises.push(
-      verifyContract(vault.address, vaultConstructorArguments),
-      verifyContract(strategy.address, strategyConstructorArguments)
+      // verifyContract(vault.address, vaultConstructorArguments),
+      // verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
- // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain); // prefer to do it manually
+    // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+ // await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
   console.log();
 
   await Promise.all(verifyContractsPromises);
-
-  if (hardhat.network.name === "bsc") {
-    await registerSubsidy(vault.address, deployer);
-    await registerSubsidy(strategy.address, deployer);
-  }
 }
 
 main()

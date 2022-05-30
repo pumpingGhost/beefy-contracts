@@ -282,6 +282,7 @@ contract StrategySpookyV2LP is StratManager, FeeManager {
         IERC20(want).safeApprove(chef, uint256(-1));
         IERC20(output).safeApprove(unirouter, uint256(-1));
         IERC20(secondOutput).safeApprove(unirouter, uint256(-1));
+        IERC20(native).safeApprove(unirouter, 0);
         IERC20(native).safeApprove(unirouter, uint256(-1));
 
         IERC20(lpToken0).safeApprove(unirouter, 0);

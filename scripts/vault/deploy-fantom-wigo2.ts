@@ -39,7 +39,7 @@ const strategyParams = {
   poolId: 6, // TODO
   chef: "0xA1a938855735C0651A6CfE2E93a32A28A236d0E9",
   unirouter: "0x5023882f4D1EC10544FCB2066abE9C1645E95AA0",
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
+  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [WIGO, FTM],

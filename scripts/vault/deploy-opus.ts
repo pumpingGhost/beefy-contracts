@@ -32,7 +32,7 @@ const strategyParams = {
     input: BEETS, // TODO: choose either FTM, UDSC or BEETS as input token(You can provide the full amount in the same currency, no need for equal shares between the tokens)
     unirouter: "0x20dd72Ed959b6147912C2e529F0a0C651c33c9ce", // Beethoven master vault
     keeper: beefyfinance.keeper,
-    strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E",
+    strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45",
     beefyFeeRecipient: beefyfinance.beefyFeeRecipient
 };
 

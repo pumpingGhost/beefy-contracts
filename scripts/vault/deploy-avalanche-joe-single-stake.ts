@@ -38,7 +38,7 @@ const strategyParams = {
   want,
   rewardPool: "0x1a731B2299E22FbAC282E7094EdA41046343Cb51", // TODO
   unirouter: joe.router,
-  strategist: "0xc41Caa060d1a95B27D161326aAE1d7d831c5171E", // some address
+  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [USDC, AVAX],

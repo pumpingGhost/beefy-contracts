@@ -8,50 +8,45 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { joe, beefyfinance },
+  platforms: { trisolaris, beefyfinance },
   tokens: {
-    PNG: { address: PNG },
-    MIM: { address: MIM },
-    AVAX: { address: AVAX },
-    USDCe: { address: USDCe },
-    DAIe: { address: DAIe },
-    TIME: { address: TIME },
-    SPELL: { address: SPELL },
-    XAVA: { address: XAVA },
-    JOE: { address: JOE },
+    ETH: { address: ETH },
   },
-} = addressBook.avax;
+} = addressBook.aurora;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x939D6eD8a0f7FC90436BA6842D7372250a03fA7c"); // TODO
-const FIEF = web3.utils.toChecksumAddress("0xeA068Fba19CE95f12d252aD8Cb2939225C4Ea02D")
-const FEED = web3.utils.toChecksumAddress("0xab592d197ACc575D16C3346f4EB70C703F308D1E")
+const want = web3.utils.toChecksumAddress("0x61C9E05d1Cdb1b70856c7a2c53fA9c220830633c"); // TODO
+const TRI = web3.utils.toChecksumAddress("0xFa94348467f64D5A457F75F8bc40495D33c65aBB");
+const NEAR = web3.utils.toChecksumAddress("0xC42C30aC6Cc15faC9bD938618BcaA1a1FaE8501d");
+const xTRI = web3.utils.toChecksumAddress("0x802119e4e253D5C19aA06A5d567C5a41596D6803");
+const stNEAR = web3.utils.toChecksumAddress("0x07F9F7f963C5cD2BBFFd30CcfB964Be114332E30");
+const USDT = web3.utils.toChecksumAddress("0x4988a896b1227218e4A686fdE5EabdcAbd91571f");
+
 
 // TODO
 const vaultParams = {
-  mooName: "Moo Joe EGG-AVAX", 
-  mooSymbol: "mooJoeEGG-AVAX",
+  mooName: "Moo Tri TRI-USDT", 
+  mooSymbol: "mooTriTRI-USDT",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 32, // TODO
-  chef: joe.masterchefV3,
-  unirouter: joe.router,
+  poolId: 4, // TODO
+  chef: "0x3838956710bcc9D122Dd23863a0549ca8D5675D6", // TODO
+  unirouter: trisolaris.router,
   strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [JOE, AVAX],
-  secondOutputToNativeRoute: [AVAX],
-  nativeToLp0Route: [AVAX], // TODO
-  nativeToLp1Route: [AVAX, FIEF], // TODO
+  outputToNativeRoute: [TRI, NEAR, ETH],
+  outputToLp0Route: [TRI, USDT], // TODO
+  outputToLp1Route: [TRI], // TODO
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyTraderJoeDualNonNativeLP",
+  strategy: "StrategyTriMiniChefLP",
 };
 
 async function main() {
@@ -94,15 +89,13 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.secondOutputToNativeRoute,
-    strategyParams.nativeToLp0Route,
-    strategyParams.nativeToLp1Route,
+    strategyParams.outputToLp0Route,
+    strategyParams.outputToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();
 
   // add this info to PR
-  console.log();
   console.log("Vault:", vault.address);
   console.log("Strategy:", strategy.address);
   console.log("Want:", strategyParams.want);
