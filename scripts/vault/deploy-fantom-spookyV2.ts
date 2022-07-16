@@ -21,29 +21,28 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xeaa3C87135eE1140E1D60FC8B577fbb41163D840"); // TODO
-const sFTMx = web3.utils.toChecksumAddress("0xd7028092c830b5C8FcE061Af2E593413EbbC1fc1");
+const want = web3.utils.toChecksumAddress("0xB471Ac6eF617e952b84C6a9fF5de65A9da96C93B"); // TODO
+const CRV = web3.utils.toChecksumAddress("0x1E4F97b9f9F913c46F1632781732927B9019C68b");
 const UST = web3.utils.toChecksumAddress("0x846e4D51d7E2043C1a87E0Ab7490B93FB940357b");
 const SD = web3.utils.toChecksumAddress("0x412a13C109aC30f0dB80AD3Bd1DeFd5D0A6c0Ac6");
 
 const vaultParams = {
-  mooName: "Moo Boo USDC-SD", // TODO
-  mooSymbol: "mooBooUSDC-SD", // TODO
+  mooName: "Moo Dummy CRV-FTM", // TODO
+  mooSymbol: "mooDummyCRV-FTM", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 3, // TODO
+  poolId: 16, // TODO
   chef: "0x18b4f774fdC7BF685daeeF66c2990b1dDd9ea6aD", // TODO
   unirouter: spookyswap.router,
   strategist: "0xB189ad2658877C4c63E07480CB680AfE8c192412", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [BOO, FTM], // TODO
-  secondOutputToNativeRoute: [FTM], // TODO
-  nativeToLp0Route: [FTM, USDC], // TODO
-  nativeToLp1Route: [FTM, USDC, SD], // TODO
+  nativeToLp0Route: [FTM, CRV], // TODO
+  nativeToLp1Route: [FTM], // TODO
   //pendingRewardsFunctionName: "pendingBOO", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
@@ -93,7 +92,6 @@ async function main() {
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
     strategyParams.outputToNativeRoute,
-    strategyParams.secondOutputToNativeRoute,
     strategyParams.nativeToLp0Route,
     strategyParams.nativeToLp1Route,
   ];

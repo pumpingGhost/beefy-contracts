@@ -20,33 +20,33 @@ const shouldVerifyOnEtherscan = false;
 
 const ALI = web3.utils.toChecksumAddress("0x45C135C1CDCE8d25A3B729A28659561385C52671");
 // const VVS = web3.utils.toChecksumAddress("0x2D03bECE6747ADC00E1a131BBA1469C15fD11e03");
-const VERSA = web3.utils.toChecksumAddress("0x00D7699b71290094CcB1a5884cD835bD65a78c17");
+const FER = web3.utils.toChecksumAddress("0x39bC1e38c842C60775Ce37566D03B41A7A66C782");
 const WBTC = web3.utils.toChecksumAddress("0x33284f95ccb7B948d9D352e1439561CF83d8d00d");
 const WETH = web3.utils.toChecksumAddress("0xa722c13135930332Eb3d749B2F0906559D2C5b99");
 const UST = web3.utils.toChecksumAddress("0x0D58a44be3dCA0aB449965dcc2c46932547Fea2f");
 
 
-const want = web3.utils.toChecksumAddress("0xD7F3d8035cd7BD5aD5E43Fa4E1d4DcA12e133FdD"); // TODO
+const want = web3.utils.toChecksumAddress("0x72eFd454bBFEca458e909B99FAACBC116880b54D"); // TODO
 
 // TODO
 const vaultParams = {
-  mooName: "Moo VVS VVS-VERSA",
-  mooSymbol: "mooVvsVVS-VERSA",
+  mooName: "Moo VVS FER-VVS",
+  mooSymbol: "mooVvsFER-VVS",
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 30, // TODO
+  poolId: 36, // TODO
   chef: "0xbc149c62EFe8AFC61728fC58b1b66a0661712e76",
   unirouter: vvs.router,
   strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [VVS, CRO], // TODO
-  secondOutputToNativeRoute: [VERSA, VVS, CRO], // TODO
-  nativeToLp0Route: [CRO, VVS, VERSA], // TODO
-  nativeToLp1Route: [CRO, VVS], // TODO
+  secondOutputToNativeRoute: [FER, VVS, CRO], // TODO
+  nativeToLp0Route: [CRO, VVS], // TODO
+  nativeToLp1Route: [CRO, VVS, FER], // TODO
 };
 
 const contractNames = {

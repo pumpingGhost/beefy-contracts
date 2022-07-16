@@ -23,17 +23,17 @@ const PAE = web3.utils.toChecksumAddress("0x9466Ab927611725B9AF76b9F31B2F879Ff14
 const pAVAX = web3.utils.toChecksumAddress("0x6ca558bd3eaB53DA1B25aB97916dd14bf6CFEe4E");  
 
 const vaultParams = {
-  mooName: "Moo Ripae pAVAX", // TODO
-  mooSymbol: "mooRipaepAVAX", // TODO
+  mooName: "Moo Sicle pAVAX", // TODO
+  mooSymbol: "mooSiclepAVAX", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
   poolId: 3, // TODO
-  chef: "0xb5cc0Ed74dde9F26fBfFCe08FF78227F4Fa86029",
-  unirouter: joe.router,
-  strategist: "0x494c13B1729B95a1df383B88340c414E34a57B45", // some address
+  chef: "0xd3344E9a4Bc67de0dF101CEe5B047fe2dc5AF354",
+  unirouter: "0xC7f372c62238f6a5b79136A9e5D16A2FD7A3f0F5",
+  strategist: "0x135ED183a23b1C45F8134f5E0053077940EE0D3D", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [PAE, AVAX], // TODO

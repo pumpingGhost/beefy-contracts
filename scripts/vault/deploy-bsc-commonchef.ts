@@ -18,21 +18,21 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0xbe6A4f74fdDc88853612C50D7404E059b37692D8"); // TODO
-const GAL = web3.utils.toChecksumAddress("0xe4Cc45Bb5DBDA06dB6183E8bf016569f40497Aa5");
+const want = web3.utils.toChecksumAddress("0x062f88E2B4896e823ac78Ac314468c29eEC4186d"); // TODO
+const DAR = web3.utils.toChecksumAddress("0x23CE9e926048273eF83be0A3A8Ba9Cb6D45cd978");
 const BUSD = web3.utils.toChecksumAddress("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56");
 const CAKE = web3.utils.toChecksumAddress("0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82");
 const BNB = web3.utils.toChecksumAddress("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c");  
 
 const vaultParams = {
-  mooName: "Moo CakeV2 GAL-BNB", // TODO
-  mooSymbol: "MooCakeV2GAL-BNB", // TODO
+  mooName: "Moo CakeV2 DAR-BNB", // TODO
+  mooSymbol: "MooCakeV2DAR-BNB", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 98, // TODO
+  poolId: 65, // TODO
   chef: "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652",
   boostStaker: "0xD7C0C12C91750A6ef37580d44B0FD6af1068e615",
   unirouter: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
@@ -40,8 +40,8 @@ const strategyParams = {
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   outputToNativeRoute: [CAKE, BNB], //TODO
-  outputToLp0Route: [CAKE, BNB], // TODO
-  outputToLp1Route: [CAKE, BNB, GAL], // TODO
+  outputToLp0Route: [CAKE, BNB, DAR], // TODO
+  outputToLp1Route: [CAKE, BNB], // TODO
   pendingRewardsFunctionName: "pendingCake", // used for rewardsAvailable(), use correct function name from masterchef
 };
 

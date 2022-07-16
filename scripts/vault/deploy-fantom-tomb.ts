@@ -22,30 +22,30 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x37fb87347BCAd93B12Fd4E43BCf07620d6387A92"); // TODO
-const TREEB = web3.utils.toChecksumAddress("0xc60D7067dfBc6f2caf30523a064f416A5Af52963");
-const TSHARE = web3.utils.toChecksumAddress("0x4cdF39285D7Ca8eB3f090fDA0C069ba5F4145B37");
-const BASED = web3.utils.toChecksumAddress("0x8D7d3409881b51466B483B11Ea1B8A03cdEd89ae");
+const want = web3.utils.toChecksumAddress("0xAA9BE68D990d5e56870B2E0544f96ffb0B1dA8F7"); // TODO
+const TOMB = web3.utils.toChecksumAddress("0x6c021Ae822BEa943b2E66552bDe1D2696a53fbB7");
+const LSHARE = web3.utils.toChecksumAddress("0xCbE0CA46399Af916784cADF5bCC3aED2052D6C45");
+const MIM = web3.utils.toChecksumAddress("0x82f0B8B456c1A451378467398982d4834b6829c1");
 // const SHA = web3.utils.toChecksumAddress("0xe0654C8e6fd4D733349ac7E09f6f23DA256bF475");
 
 
 const vaultParams = {
-  mooName: "Moo Tomb TREEB-USDC", // TODO
-  mooSymbol: "mooTombTREEB-USDC", // TODO
+  mooName: "Moo Dummy TOMB-USDC", // TODO
+  mooSymbol: "mooDummyTOMB-USDC", // TODO
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 15, // TODO
-  chef: "0xcc0a87F7e7c693042a9Cc703661F5060c80ACb43",   // Based masterchef:  0xAc0fa95058616D7539b6Eecb6418A68e7c18A746
+  poolId: 1, // TODO 
+  chef: "0x1F832dfBA15346D25438Cf7Ac683b013Ed03E32f",   // Based masterchef:  0xAc0fa95058616D7539b6Eecb6418A68e7c18A746; TshareRewarder: 0xcc0a87F7e7c693042a9Cc703661F5060c80ACb43; LshareRewarder: 0x1F832dfBA15346D25438Cf7Ac683b013Ed03E32f
   unirouter: "0x6D0176C5ea1e44b08D3dd001b0784cE42F47a3A7",
   strategist: "0xB189ad2658877C4c63E07480CB680AfE8c192412", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  outputToNativeRoute: [TSHARE, USDC, FTM], // TODO
-  outputToLp0Route: [TSHARE, USDC], // TODO
-  outputToLp1Route: [TSHARE, USDC, TREEB], // TODO
+  outputToNativeRoute: [LSHARE, USDC, FTM], // TODO
+  outputToLp0Route: [LSHARE, USDC], // TODO
+  outputToLp1Route: [LSHARE, USDC, TOMB], // TODO
   pendingRewardsFunctionName: "pendingShare", // used for rewardsAvailable(), use correct function name from masterchef
 };
 

@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../../interfaces/common/IERC20Extended.sol";
 import "../../interfaces/common/IUniswapRouterETH.sol";
 import "../../interfaces/common/IUniswapV2Pair.sol";
-import "../../interfaces/common/IStakingDualRewards.sol";
+import "../../interfaces/quick/IQuickDualRewards.sol";
 import "../../interfaces/quick/IDragonsLair.sol";
 import "../Common/StratManager.sol";
 import "../Common/FeeManager.sol";
@@ -21,6 +21,7 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
     // Tokens used
     address public native;
     address public output;
+    address public reward;
     address public want;
     address public lpToken0;
     address public lpToken1;
@@ -31,6 +32,7 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
 
     // Routes
     address[] public outputToNativeRoute;
+    address[] public rewardToNativeRoute;
     address[] public nativeToLp0Route;
     address[] public nativeToLp1Route;
 
@@ -44,7 +46,6 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
     event Deposit(uint256 tvl);
     event Withdraw(uint256 tvl);
 
-
     constructor(
         address _want,
         address _rewardPool,
@@ -54,6 +55,7 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
         address _strategist,
         address _beefyFeeRecipient,
         address[] memory _outputToNativeRoute,
+        address[] memory _rewardToNativeRoute,
         address[] memory _nativeToLp0Route,
         address[] memory _nativeToLp1Route
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
@@ -62,16 +64,18 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
 
         output = _outputToNativeRoute[0];
         native = _outputToNativeRoute[_outputToNativeRoute.length - 1];
+        reward = _rewardToNativeRoute[0];
         outputToNativeRoute = _outputToNativeRoute;
+        rewardToNativeRoute = _rewardToNativeRoute;
 
         // setup lp routing
         lpToken0 = IUniswapV2Pair(want).token0();
-        require(_nativeToLp0Route[0] == native, "outputToLp0Route[0] != output");
+        require(_nativeToLp0Route[0] == native, "nativeToLp0Route[0] != native");
         require(_nativeToLp0Route[_nativeToLp0Route.length - 1] == lpToken0, "nativeToLp0Route[last] != lpToken0");
         nativeToLp0Route = _nativeToLp0Route;
 
         lpToken1 = IUniswapV2Pair(want).token1();
-        require(_nativeToLp1Route[0] == output,  "nativeToLp1Route[0] != output");
+        require(_nativeToLp1Route[0] == native,  "nativeToLp1Route[0] != native");
         require(_nativeToLp1Route[_nativeToLp1Route.length - 1] == lpToken1, "nativeToLP1Route[last] != lpToken1");
         nativeToLp1Route = _nativeToLp1Route;
 
@@ -83,7 +87,7 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
         uint256 wantBal = balanceOfWant();
 
         if (wantBal > 0) {
-            IStakingDualRewards(rewardPool).stake(wantBal);
+            IQuickDualRewards(rewardPool).stake(wantBal);
         }
         emit Deposit(balanceOf());
     }
@@ -94,7 +98,7 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
         uint256 wantBal = balanceOfWant();
 
         if (wantBal < _amount) {
-            IStakingDualRewards(rewardPool).withdraw(_amount.sub(wantBal));
+            IQuickDualRewards(rewardPool).withdraw(_amount.sub(wantBal));
             wantBal = balanceOfWant();
         }
 
@@ -133,12 +137,12 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
 
     // compounds earnings and charges performance fee
     function _harvest(address callFeeRecipient) internal whenNotPaused {
-        IStakingDualRewards(rewardPool).getReward();
+        IQuickDualRewards(rewardPool).getReward();
         uint256 lairBal = IERC20(dragonsLair).balanceOf(address(this));
         IDragonsLair(dragonsLair).leave(lairBal);
 
         uint256 outputBal = IERC20(output).balanceOf(address(this));
-        uint256 rewardBal = IERC20(native).balanceOf(address(this));
+        uint256 rewardBal = IERC20(reward).balanceOf(address(this));
 
         if (outputBal > 0 || rewardBal > 0) {
             chargeFees(callFeeRecipient);
@@ -156,6 +160,11 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
         uint256 outputToNative = IERC20(output).balanceOf(address(this));
         if (outputToNative > 0) {
             IUniswapRouterETH(unirouter).swapExactTokensForTokens(outputToNative, 0, outputToNativeRoute, address(this), block.timestamp);
+        }
+
+        uint256 rewardToNative = IERC20(reward).balanceOf(address(this));
+        if (rewardToNative > 0 && reward != native) {
+            IUniswapRouterETH(unirouter).swapExactTokensForTokens(rewardToNative, 0, rewardToNativeRoute, address(this), block.timestamp);
         }
 
         uint256 nativeBal = IERC20(native).balanceOf(address(this)).mul(45).div(1000); //4.5% of total native balance
@@ -199,36 +208,40 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
 
     // it calculates how much 'want' the strategy has working in the farm.
     function balanceOfPool() public view returns (uint256) {
-        return IStakingDualRewards(rewardPool).balanceOf(address(this));
+        return IQuickDualRewards(rewardPool).balanceOf(address(this));
     }
 
     // returns rewards unharvested
     function rewardsAAvailable() public view returns (uint256) {
-        uint256 lairReward = IStakingDualRewards(rewardPool).earnedA(address(this));
+        uint256 lairReward = IQuickDualRewards(rewardPool).earnedA(address(this));
         return IDragonsLair(dragonsLair).dQUICKForQUICK(lairReward);
     }
 
     // returns rewards unharvested
     function rewardsBAvailable() public view returns (uint256) {
-       return IStakingDualRewards(rewardPool).earnedB(address(this));
+       return IQuickDualRewards(rewardPool).earnedB(address(this));
     }
 
     // returns native reward for calling harvest
     function callReward() public view returns (uint256) {
         uint256 outputBal = rewardsAAvailable();
-        uint256 nativeBal = rewardsBAvailable();
+        uint256 rewardBal = rewardsBAvailable();
 
         uint256 nativeOut;
         if (outputBal > 0) {
             try IUniswapRouterETH(unirouter).getAmountsOut(outputBal, outputToNativeRoute)
-            returns (uint256[] memory amountOut)
+            returns (uint256[] memory amountOutFromOutput)
             {
-                nativeOut = amountOut[amountOut.length - 1];
+                nativeOut = amountOutFromOutput[amountOutFromOutput.length - 1];
+                try IUniswapRouterETH(unirouter).getAmountsOut(rewardBal, rewardToNativeRoute)
+                returns (uint256[] memory amountOutFromReward)
+                {
+                    nativeOut += amountOutFromReward[amountOutFromReward.length - 1];
+                }
+                catch {}
             }
             catch {}
         }
-
-        nativeOut = nativeOut.add(nativeBal);
 
         return nativeOut.mul(45).div(1000).mul(callFee).div(MAX_FEE);
     }
@@ -237,7 +250,7 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
     function retireStrat() external {
         require(msg.sender == vault, "!vault");
 
-        IStakingDualRewards(rewardPool).withdraw(balanceOfPool());
+        IQuickDualRewards(rewardPool).withdraw(balanceOfPool());
 
         uint256 wantBal = balanceOfWant();
         IERC20(want).transfer(vault, wantBal);
@@ -256,7 +269,7 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
     // pauses deposits and withdraws all funds from third party systems.
     function panic() public onlyManager {
         pause();
-        IStakingDualRewards(rewardPool).withdraw(balanceOfPool());
+        IQuickDualRewards(rewardPool).withdraw(balanceOfPool());
     }
 
     function pause() public onlyManager {
@@ -285,10 +298,17 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
         return outputToNativeRoute;
     }
 
+    function rewardToNative() public view returns (address[] memory) {
+        return rewardToNativeRoute;
+    }
+
     function _giveAllowances() internal {
         IERC20(want).safeApprove(rewardPool, uint256(-1));
         IERC20(output).safeApprove(unirouter, uint256(-1));
         IERC20(native).safeApprove(unirouter, uint256(-1));
+
+        IERC20(reward).safeApprove(unirouter, 0);
+        IERC20(reward).safeApprove(unirouter, uint256(-1));
 
         IERC20(lpToken0).safeApprove(unirouter, 0);
         IERC20(lpToken0).safeApprove(unirouter, uint256(-1));
@@ -301,7 +321,8 @@ contract StrategyQuickswapDualRewardLP is StratManager, FeeManager {
         IERC20(want).safeApprove(rewardPool, 0);
         IERC20(output).safeApprove(unirouter, 0);
         IERC20(native).safeApprove(unirouter, 0);
+        IERC20(reward).safeApprove(unirouter, 0);
         IERC20(lpToken0).safeApprove(unirouter, 0);
         IERC20(lpToken1).safeApprove(unirouter, 0);
     }
-}
+} 
