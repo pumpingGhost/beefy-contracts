@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.0;
-//pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "../../interfaces/common/IUniswapRouterETH.sol";
-import "../../interfaces/common/IUniswapV2Pair.sol";
-import "../../interfaces/stellaswap/IMasterChef.sol";
+import "../../interfaces/common/IUniswapRouter.sol";
+import "../../interfaces/common/IStableRouter.sol";
+import "../../interfaces/common/IWrappedNative.sol";
+import "../../interfaces/traderjoe/IMasterChef.sol";
 import "../Common/StratManager.sol";
 import "../Common/FeeManager.sol";
 
-/**
- * Used to compound StellaDistributorV2
- */
-contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
+contract StrategyVoltageStable is StratManager, FeeManager {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -25,12 +22,13 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
     address public output;
     address public secondOutput;
     address public want;
-    address public lpToken0;
-    address public lpToken1;
+    address public input;
 
     // Third party contracts
     address public chef;
     uint256 public poolId;
+    address public stableRouter;
+    uint256 public depositIndex;
 
     bool public harvestOnDeposit;
     uint256 public lastHarvest;
@@ -38,12 +36,8 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
     // Routes
     address[] public outputToNativeRoute;
     address[] public secondOutputToNativeRoute;
-    address[] public nativeToLp0Route;
-    address[] public nativeToLp1Route;
+    address[] public nativeToInputRoute;
 
-    /**
-     * @dev Event that is fired each time someone harvests the strat.
-     */
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);
     event Withdraw(uint256 tvl);
@@ -55,45 +49,34 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
         address _chef,
         address _vault,
         address _unirouter,
+        address _stableRouter,
         address _keeper,
         address _strategist,
         address _beefyFeeRecipient,
         address[] memory _outputToNativeRoute,
         address[] memory _secondOutputToNativeRoute,
-        address[] memory _nativeToLp0Route,
-        address[] memory _nativeToLp1Route
+        address[] memory _nativeToInputRoute
     ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
         want = _want;
         poolId = _poolId;
         chef = _chef;
+        stableRouter = _stableRouter;
 
         output = _outputToNativeRoute[0];
         native = _outputToNativeRoute[_outputToNativeRoute.length - 1];
-        outputToNativeRoute = _outputToNativeRoute;
-        require(outputToNativeRoute[0] == output, "outputToNativeRoute[0] != output");
-        require(outputToNativeRoute[outputToNativeRoute.length - 1] == native, "outputToNativeRoute[last] != native");
-
         secondOutput = _secondOutputToNativeRoute[0];
+        input = _nativeToInputRoute[_nativeToInputRoute.length - 1];
+        depositIndex = IStableRouter(stableRouter).getTokenIndex(input);
+
+        outputToNativeRoute = _outputToNativeRoute;
         secondOutputToNativeRoute = _secondOutputToNativeRoute;
-        require(secondOutputToNativeRoute[0] == secondOutput, "secondOutputToNativeRoute[0] != secondOutput");
-        require(secondOutputToNativeRoute[secondOutputToNativeRoute.length - 1] == native, "secondOutputToNativeRoute[last] != native");
-
-        // setup lp routing
-        lpToken0 = IUniswapV2Pair(want).token0();
-        require(_nativeToLp0Route[0] == native, "nativeToLp0Route[0] != native");
-        require(_nativeToLp0Route[_nativeToLp0Route.length - 1] == lpToken0, "nativeToLp0Route[last] != lpToken0");
-        nativeToLp0Route = _nativeToLp0Route;
-
-        lpToken1 = IUniswapV2Pair(want).token1();
-        require(_nativeToLp1Route[0] == native, "nativeToLp1Route[0] != native");
-        require(_nativeToLp1Route[_nativeToLp1Route.length - 1] == lpToken1, "nativeToLp1Route[last] != lpToken1");
-        nativeToLp1Route = _nativeToLp1Route;
+        nativeToInputRoute = _nativeToInputRoute;
 
         _giveAllowances();
     }
 
     // puts the funds to work
-    function deposit() public whenNotPaused payable {
+    function deposit() public whenNotPaused {
         uint256 wantBal = IERC20(want).balanceOf(address(this));
 
         if (wantBal > 0) {
@@ -102,7 +85,7 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
         }
     }
 
-    function withdraw(uint256 _amount) external payable {
+    function withdraw(uint256 _amount) external {
         require(msg.sender == vault, "!vault");
 
         uint256 wantBal = IERC20(want).balanceOf(address(this));
@@ -163,18 +146,20 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
 
     // performance fees
     function chargeFees(address callFeeRecipient) internal {
-
-        if (output != native) {
-            uint256 toNative = IERC20(output).balanceOf(address(this));
-            if (toNative > 0) {
-                IUniswapRouterETH(unirouter).swapExactTokensForTokens(toNative, 0, outputToNativeRoute, address(this), now);
-            }
+        uint256 toNative = IERC20(output).balanceOf(address(this));
+        if (toNative > 0 && output != native) {
+            IUniswapRouter(unirouter).swapExactTokensForTokens(toNative, 0, outputToNativeRoute, address(this), now);
         }
 
-        if (secondOutput != native) {
-            uint256 secondToNative = IERC20(secondOutput).balanceOf(address(this));
-            if (secondToNative > 0) {
-                IUniswapRouterETH(unirouter).swapExactTokensForTokens(secondToNative, 0, secondOutputToNativeRoute, address(this), now);
+        uint256 secondToNative = IERC20(secondOutput).balanceOf(address(this));
+        if (secondToNative > 0 && secondOutput != native) {
+            IUniswapRouter(unirouter).swapExactTokensForTokens(secondToNative, 0, secondOutputToNativeRoute, address(this), now);
+        }
+
+        if (secondOutput == native) {
+            uint256 nativeBal = address(this).balance;
+            if (nativeBal > 0) {
+                IWrappedNative(native).deposit{value: nativeBal}();
             }
         }
 
@@ -194,19 +179,12 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
 
     // Adds liquidity to AMM and gets more LP tokens.
     function addLiquidity() internal {
-        uint256 nativeHalf = IERC20(native).balanceOf(address(this)).div(2);
+        uint256 nativeBal = IERC20(native).balanceOf(address(this));
+        IUniswapRouter(unirouter).swapExactTokensForTokens(nativeBal, 0, nativeToInputRoute, address(this), now);
 
-        if (lpToken0 != native) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeHalf, 0, nativeToLp0Route, address(this), now);
-        }
-
-        if (lpToken1 != native) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeHalf, 0, nativeToLp1Route, address(this), now);
-        }
-
-        uint256 lp0Bal = IERC20(lpToken0).balanceOf(address(this));
-        uint256 lp1Bal = IERC20(lpToken1).balanceOf(address(this));
-        IUniswapRouterETH(unirouter).addLiquidity(lpToken0, lpToken1, lp0Bal, lp1Bal, 1, 1, address(this), now);
+        uint256[] memory inputs = new uint256[](3);
+        inputs[depositIndex] = IERC20(input).balanceOf(address(this));
+        IStableRouter(stableRouter).addLiquidity(inputs, 1, now);
     }
 
     // calculate the total underlaying 'want' held by the strat.
@@ -221,34 +199,32 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
 
     // it calculates how much 'want' the strategy has working in the farm.
     function balanceOfPool() public view returns (uint256) {
-        (uint256 _amount,,,) = IMasterChef(chef).userInfo(poolId, address(this));
+        (uint256 _amount,) = IMasterChef(chef).userInfo(poolId, address(this));
         return _amount;
     }
 
     function rewardsAvailable() public view returns (uint256, uint256) {
-        (,,,uint256[] memory amounts) = IMasterChef(chef).pendingTokens(poolId, address(this));
-        // first output is always stella according to the contract
-        // we only support dual rewards so second output is idx 1
-        return (amounts[0], amounts[1]);
+        (uint256 outputBal,,,uint256 secondBal) = IMasterChef(chef).pendingTokens(poolId, address(this));
+        return (outputBal, secondBal);
     }
 
     function callReward() public view returns (uint256) {
         (uint256 outputBal, uint256 secondBal) = rewardsAvailable();
         uint256 nativeBal;
 
-        try IUniswapRouterETH(unirouter).getAmountsOut(outputBal, outputToNativeRoute)
-            returns (uint256[] memory amountOut)
-        {
+        if (outputBal > 0) {
+            uint256[] memory amountOut = IUniswapRouter(unirouter).getAmountsOut(outputBal, outputToNativeRoute);
             nativeBal = nativeBal.add(amountOut[amountOut.length -1]);
         }
-        catch {}
 
-        try IUniswapRouterETH(unirouter).getAmountsOut(secondBal, secondOutputToNativeRoute)
-            returns (uint256[] memory amountOut)
-        {
-            nativeBal = nativeBal.add(amountOut[amountOut.length -1]);
+        if (secondBal > 0) {
+            if (secondOutput == native) {
+                nativeBal = nativeBal.add(secondBal);
+            } else {
+                uint256[] memory amountOut = IUniswapRouter(unirouter).getAmountsOut(secondBal, secondOutputToNativeRoute);
+                nativeBal = nativeBal.add(amountOut[amountOut.length -1]);
+            }
         }
-        catch {}
 
         return nativeBal.mul(45).div(1000).mul(callFee).div(MAX_FEE);
     }
@@ -297,22 +273,18 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
         IERC20(want).safeApprove(chef, uint256(-1));
         IERC20(output).safeApprove(unirouter, uint256(-1));
         IERC20(secondOutput).safeApprove(unirouter, uint256(-1));
+        IERC20(input).safeApprove(stableRouter, uint256(-1));
+
+        IERC20(native).safeApprove(unirouter, 0);
         IERC20(native).safeApprove(unirouter, uint256(-1));
-
-        IERC20(lpToken0).safeApprove(unirouter, 0);
-        IERC20(lpToken0).safeApprove(unirouter, uint256(-1));
-
-        IERC20(lpToken1).safeApprove(unirouter, 0);
-        IERC20(lpToken1).safeApprove(unirouter, uint256(-1));
     }
 
     function _removeAllowances() internal {
         IERC20(want).safeApprove(chef, 0);
         IERC20(output).safeApprove(unirouter, 0);
         IERC20(secondOutput).safeApprove(unirouter, 0);
+        IERC20(input).safeApprove(stableRouter, 0);
         IERC20(native).safeApprove(unirouter, 0);
-        IERC20(lpToken0).safeApprove(unirouter, 0);
-        IERC20(lpToken1).safeApprove(unirouter, 0);
     }
 
     function outputToNative() external view returns (address[] memory) {
@@ -323,11 +295,9 @@ contract StrategyStellaswapDualRewardLP is StratManager, FeeManager {
         return secondOutputToNativeRoute;
     }
 
-    function nativeToLp0() external view returns (address[] memory) {
-        return nativeToLp0Route;
+    function nativeToInput() external view returns (address[] memory) {
+        return nativeToInputRoute;
     }
-
-    function nativeToLp1() external view returns (address[] memory) {
-        return nativeToLp1Route;
-    }
+     
+    receive () external payable {}
 }

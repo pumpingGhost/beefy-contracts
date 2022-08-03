@@ -1,39 +1,58 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.6.0;
+pragma experimental ABIEncoderV2;
 
-import "@openzeppelin-4/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin-4/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../../interfaces/common/IUniswapRouterETH.sol";
-import "../../interfaces/common/IUniswapV2Pair.sol";
+import "../../interfaces/sushi/ITridentRouter.sol";
+import "../../interfaces/sushi/IBentoPool.sol";
+import "../../interfaces/sushi/IBentoBox.sol";
 import "../../interfaces/common/IMasterChef.sol";
-import "../Common/StratFeeManager.sol";
+import "../../interfaces/stargate/IStargateRouter.sol";
+import "../Common/StratManager.sol";
+import "../Common/FeeManager.sol";
 import "../../utils/StringUtils.sol";
-import "../../utils/GasFeeThrottler.sol";
+import "../../utils/GasThrottler.sol";
 
-contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
+contract StrategyStargatePoly is StratManager, FeeManager, GasThrottler {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
+
+    struct Routes {
+        address[] outputToStableRoute;
+        address outputToStablePool;
+        address[] stableToNativeRoute;
+        address[] stableToInputRoute;
+    }
 
     // Tokens used
     address public native;
     address public output;
     address public want;
-    address public lpToken0;
-    address public lpToken1;
+    address public stable;
+    address public input;
 
     // Third party contracts
-    address public chef;
+    address public chef = address(0x8731d54E9D02c286767d56ac03e8037C07e01e98);
     uint256 public poolId;
+    address public stargateRouter = address(0x45A01E4e04F14f7A4a6702c74187c5F6222033cd);
+    address public quickRouter = address(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff);
+    uint256 public routerPoolId;
+    address public bentoBox = address(0x0319000133d3AdA02600f0875d2cf03D442C3367);
 
     bool public harvestOnDeposit;
     uint256 public lastHarvest;
     string public pendingRewardsFunctionName;
 
     // Routes
-    address[] public outputToNativeRoute;
-    address[] public outputToLp0Route;
-    address[] public outputToLp1Route;
+    address[] public outputToStableRoute;
+    ITridentRouter.ExactInputSingleParams public outputToStableParams;
+    address[] public stableToNativeRoute;
+    address[] public stableToInputRoute;
 
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);
@@ -43,30 +62,38 @@ contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
     constructor(
         address _want,
         uint256 _poolId,
-        address _chef,
-        CommonAddresses memory _commonAddresses,
-        address[] memory _outputToNativeRoute,
-        address[] memory _outputToLp0Route,
-        address[] memory _outputToLp1Route
-    ) StratFeeManager(_commonAddresses) {
+        uint256 _routerPoolId,
+        address _vault,
+        address _unirouter,
+        address _keeper,
+        address _strategist,
+        address _beefyFeeRecipient,
+        Routes memory _routes
+    ) StratManager(_keeper, _strategist, _unirouter, _vault, _beefyFeeRecipient) public {
         want = _want;
         poolId = _poolId;
-        chef = _chef;
+        routerPoolId = _routerPoolId;
 
-        output = _outputToNativeRoute[0];
-        native = _outputToNativeRoute[_outputToNativeRoute.length - 1];
-        outputToNativeRoute = _outputToNativeRoute;
+        output = _routes.outputToStableRoute[0];
+        stable = _routes.outputToStableRoute[_routes.outputToStableRoute.length - 1];
+        native = _routes.stableToNativeRoute[_routes.stableToNativeRoute.length - 1];
+        input = _routes.stableToInputRoute[_routes.stableToInputRoute.length - 1];
 
-        // setup lp routing
-        lpToken0 = IUniswapV2Pair(want).token0();
-        require(_outputToLp0Route[0] == output, "outputToLp0Route[0] != output");
-        require(_outputToLp0Route[_outputToLp0Route.length - 1] == lpToken0, "outputToLp0Route[last] != lpToken0");
-        outputToLp0Route = _outputToLp0Route;
+        require(_routes.stableToNativeRoute[0] == stable, 'stableToNativeRoute[0] != stable');
+        require(_routes.stableToInputRoute[0] == stable, 'stableToInputRoute[0] != stable');
+        outputToStableRoute = _routes.outputToStableRoute;
+        stableToNativeRoute = _routes.stableToNativeRoute;
+        stableToInputRoute = _routes.stableToInputRoute;
 
-        lpToken1 = IUniswapV2Pair(want).token1();
-        require(_outputToLp1Route[0] == output, "outputToLp1Route[0] != output");
-        require(_outputToLp1Route[_outputToLp1Route.length - 1] == lpToken1, "outputToLp1Route[last] != lpToken1");
-        outputToLp1Route = _outputToLp1Route;
+        outputToStableParams = ITridentRouter.ExactInputSingleParams(
+            0,
+            1,
+            _routes.outputToStablePool,
+            output,
+            abi.encode(output, address(this), true)
+        );
+
+        IBentoBox(bentoBox).setMasterContractApproval(address(this), unirouter, true, 0, bytes32(0), bytes32(0));
 
         _giveAllowances();
     }
@@ -87,7 +114,7 @@ contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
         uint256 wantBal = IERC20(want).balanceOf(address(this));
 
         if (wantBal < _amount) {
-            IMasterChef(chef).withdraw(poolId, _amount - wantBal);
+            IMasterChef(chef).withdraw(poolId, _amount.sub(wantBal));
             wantBal = IERC20(want).balanceOf(address(this));
         }
 
@@ -96,8 +123,8 @@ contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
         }
 
         if (tx.origin != owner() && !paused()) {
-            uint256 withdrawalFeeAmount = wantBal * withdrawalFee / WITHDRAWAL_MAX;
-            wantBal = wantBal - withdrawalFeeAmount;
+            uint256 withdrawalFeeAmount = wantBal.mul(withdrawalFee).div(WITHDRAWAL_MAX);
+            wantBal = wantBal.sub(withdrawalFeeAmount);
         }
 
         IERC20(want).safeTransfer(vault, wantBal);
@@ -105,7 +132,7 @@ contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
         emit Withdraw(balanceOf());
     }
 
-    function beforeDeposit() external virtual override {
+    function beforeDeposit() external override {
         if (harvestOnDeposit) {
             require(msg.sender == vault, "!vault");
             _harvest(tx.origin);
@@ -141,21 +168,21 @@ contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
 
     // performance fees
     function chargeFees(address callFeeRecipient) internal {
-        IFeeConfig.FeeCategory memory fees = getFees();
-        uint256 toNative = IERC20(output).balanceOf(address(this)) * fees.total / DIVISOR;
-        IUniswapRouterETH(unirouter).swapExactTokensForTokens(
-            toNative, 0, outputToNativeRoute, address(this), block.timestamp
-        );
+        outputToStableParams.amountIn = IERC20(output).balanceOf(address(this));
+        ITridentRouter(unirouter).exactInputSingleWithNativeToken(outputToStableParams);
+
+        uint256 toNative = IERC20(stable).balanceOf(address(this)).mul(45).div(1000);
+        IUniswapRouterETH(quickRouter).swapExactTokensForTokens(toNative, 0, stableToNativeRoute, address(this), now);
 
         uint256 nativeBal = IERC20(native).balanceOf(address(this));
 
-        uint256 callFeeAmount = nativeBal * fees.call / DIVISOR;
+        uint256 callFeeAmount = nativeBal.mul(callFee).div(MAX_FEE);
         IERC20(native).safeTransfer(callFeeRecipient, callFeeAmount);
 
-        uint256 beefyFeeAmount = nativeBal * fees.beefy / DIVISOR;
+        uint256 beefyFeeAmount = nativeBal.mul(beefyFee).div(MAX_FEE);
         IERC20(native).safeTransfer(beefyFeeRecipient, beefyFeeAmount);
 
-        uint256 strategistFeeAmount = nativeBal * fees.strategist / DIVISOR;
+        uint256 strategistFeeAmount = nativeBal.mul(STRATEGIST_FEE).div(MAX_FEE);
         IERC20(native).safeTransfer(strategist, strategistFeeAmount);
 
         emit ChargedFees(callFeeAmount, beefyFeeAmount, strategistFeeAmount);
@@ -163,29 +190,18 @@ contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
 
     // Adds liquidity to AMM and gets more LP tokens.
     function addLiquidity() internal {
-        uint256 outputHalf = IERC20(output).balanceOf(address(this)) / 2;
-        if (lpToken0 != output) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(
-                outputHalf, 0, outputToLp0Route, address(this), block.timestamp
-            );
+        if (stable != input) {
+            uint256 toInput = IERC20(stable).balanceOf(address(this));
+            IUniswapRouterETH(quickRouter).swapExactTokensForTokens(toInput, 0, stableToInputRoute, address(this), now);
         }
 
-        if (lpToken1 != output) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(
-                outputHalf, 0, outputToLp1Route, address(this), block.timestamp
-            );
-        }
-
-        uint256 lp0Bal = IERC20(lpToken0).balanceOf(address(this));
-        uint256 lp1Bal = IERC20(lpToken1).balanceOf(address(this));
-        IUniswapRouterETH(unirouter).addLiquidity(
-            lpToken0, lpToken1, lp0Bal, lp1Bal, 1, 1, address(this), block.timestamp
-        );
+        uint256 inputBal = IERC20(input).balanceOf(address(this));
+        IStargateRouter(stargateRouter).addLiquidity(routerPoolId, inputBal, address(this));
     }
 
     // calculate the total underlaying 'want' held by the strat.
     function balanceOf() public view returns (uint256) {
-        return balanceOfWant() + balanceOfPool();
+        return balanceOfWant().add(balanceOfPool());
     }
 
     // it calculates how much 'want' this contract holds.
@@ -218,16 +234,19 @@ contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
     }
 
     // native reward amount for calling harvest
-    function callReward() public view returns (uint256) {
-        IFeeConfig.FeeCategory memory fees = getFees();
+    function callReward() external view returns (uint256) {
         uint256 outputBal = rewardsAvailable();
         uint256 nativeOut;
         if (outputBal > 0) {
-            uint256[] memory amountOut = IUniswapRouterETH(unirouter).getAmountsOut(outputBal, outputToNativeRoute);
-            nativeOut = amountOut[amountOut.length -1];
+            bytes memory data = abi.encode(output, outputBal);
+            uint256 inputBal = IBentoPool(outputToStableParams.pool).getAmountOut(data);
+            if (inputBal > 0) {
+                uint256[] memory amountOut = IUniswapRouterETH(quickRouter).getAmountsOut(inputBal, stableToNativeRoute);
+                nativeOut = amountOut[amountOut.length - 1];
+            }
         }
 
-        return nativeOut * fees.total / DIVISOR * fees.call / DIVISOR;
+        return nativeOut.mul(45).div(1000).mul(callFee).div(MAX_FEE);
     }
 
     function setHarvestOnDeposit(bool _harvestOnDeposit) external onlyManager {
@@ -275,32 +294,28 @@ contract StrategyCommonChefLP is StratFeeManager, GasFeeThrottler {
     }
 
     function _giveAllowances() internal {
-        IERC20(want).safeApprove(chef, type(uint).max);
-        IERC20(output).safeApprove(unirouter, type(uint).max);
-
-        IERC20(lpToken0).safeApprove(unirouter, 0);
-        IERC20(lpToken0).safeApprove(unirouter, type(uint).max);
-
-        IERC20(lpToken1).safeApprove(unirouter, 0);
-        IERC20(lpToken1).safeApprove(unirouter, type(uint).max);
+        IERC20(want).safeApprove(chef, uint256(-1));
+        IERC20(output).safeApprove(bentoBox, uint256(-1));
+        IERC20(stable).safeApprove(quickRouter, uint256(-1));
+        IERC20(input).safeApprove(stargateRouter, uint256(-1));
     }
 
     function _removeAllowances() internal {
         IERC20(want).safeApprove(chef, 0);
-        IERC20(output).safeApprove(unirouter, 0);
-        IERC20(lpToken0).safeApprove(unirouter, 0);
-        IERC20(lpToken1).safeApprove(unirouter, 0);
+        IERC20(output).safeApprove(bentoBox, 0);
+        IERC20(stable).safeApprove(quickRouter, 0);
+        IERC20(input).safeApprove(stargateRouter, 0);
     }
 
-    function outputToNative() external view returns (address[] memory) {
-        return outputToNativeRoute;
+    function outputToStable() external view returns (address[] memory) {
+        return outputToStableRoute;
     }
 
-    function outputToLp0() external view returns (address[] memory) {
-        return outputToLp0Route;
+    function stableToNative() external view returns (address[] memory) {
+        return stableToNativeRoute;
     }
 
-    function outputToLp1() external view returns (address[] memory) {
-        return outputToLp1Route;
+    function stableToInput() external view returns (address[] memory) {
+        return stableToInputRoute;
     }
 }
