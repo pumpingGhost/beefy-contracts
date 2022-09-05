@@ -1,52 +1,48 @@
 import hardhat, { ethers, web3 } from "hardhat";
 import { addressBook } from "blockchain-addressbook";
 import { predictAddresses } from "../../utils/predictAddresses";
-import { setCorrectCallFee } from "../../utils/setCorrectCallFee";
 import { setPendingRewardsFunctionName } from "../../utils/setPendingRewardsFunctionName";
 import { verifyContract } from "../../utils/verifyContract";
-import { BeefyChain } from "../../utils/beefyChain";
 
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: {  pancake, beefyfinance },
+  platforms: { pancake, beefyfinance },
   tokens: {
-    BNB: { address: BNB },
     CAKE: { address: CAKE },
-    DAI: { address: DAI },
-    BUSD: { address: BUSD },
-    USDT: { address: USDT },
-    USDC: { address: USDC },
-    LINK: { address: LINK},
-    SXP: { address: SXP }
+    WBNB: { address: WBNB },
+    WOM: { address: WOM },
+    SD: { address: SD },
+    BUSD: { address: BUSD }
   },
 } = addressBook.bsc;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x0eD7e52944161450477ee417DE9Cd3a859b14fD0");
+const want = web3.utils.toChecksumAddress("0xe68D05418A8d7969D9CA6761ad46F449629d928c");
 const ensId = ethers.utils.formatBytes32String("cake.eth");
 
 const vaultParams = {
-  mooName: "Moo Test",
-  mooSymbol: "mooTest",
+  mooName: "Moo CakeV2 WOM-BUSD",
+  mooSymbol: "mooCakeV2WOM-BUSD",
   delay: 21600,
 };
 
 const strategyParams = {
-  want,
-  poolId: 2,
-  chef: "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652", //pancake.masterchef,
+  want: want,
+  poolId: 116,
+  chef: pancake.masterchefV2,
   unirouter: pancake.router,
-  strategist: "0x4cC72219fc8aEF162FC0c255D9B9C3Ff93B10882", // some address
+  strategist: process.env.STRATEGIST_ADDRESS,
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   beefyFeeConfig: beefyfinance.beefyFeeConfig,
-  outputToNativeRoute: [CAKE, BNB],
-  outputToLp0Route: [CAKE],
-  outputToLp1Route: [CAKE, BNB],
-  ensId
- // pendingRewardsFunctionName: "pendingTri", // used for rewardsAvailable(), use correct function name from masterchef
+  outputToNativeRoute: [CAKE, WBNB],
+  outputToLp0Route: [CAKE, BUSD, WOM],
+  outputToLp1Route: [CAKE, BUSD],
+  ensId,
+  shouldSetPendingRewardsFunctionName: true,
+  pendingRewardsFunctionName: "pendingCake", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
@@ -119,8 +115,11 @@ async function main() {
       verifyContract(strategy.address, strategyConstructorArguments)
     );
   }
- // await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
-  await setCorrectCallFee(strategy, hardhat.network.name as BeefyChain);
+
+  if (strategyParams.shouldSetPendingRewardsFunctionName) {
+      await setPendingRewardsFunctionName(strategy, strategyParams.pendingRewardsFunctionName);
+  }
+  
   console.log(`Transfering Vault Owner to ${beefyfinance.vaultOwner}`)
   await vault.transferOwnership(beefyfinance.vaultOwner);
   console.log();
