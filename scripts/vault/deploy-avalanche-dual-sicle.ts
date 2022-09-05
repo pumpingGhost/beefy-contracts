@@ -38,6 +38,7 @@ const strategyParams = {
   strategist: "0x135ED183a23b1C45F8134f5E0053077940EE0D3D", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
+  beefyFeeConfig: "0xBb0c0A821D1F9bC7405f5370DE5f9D2F11975073",
   outputToNativeRoute: [WINE, POPS, AVAX],
   secondOutputToNativeRoute: [POPS, AVAX],
   outputToLp0Route: [AVAX, MIM], // TODO
@@ -81,15 +82,20 @@ async function main() {
   const vault = await Vault.deploy(...vaultConstructorArguments);
   await vault.deployed();
 
-  const strategyConstructorArguments = [
-    strategyParams.want,
-    strategyParams.poolId,
-    strategyParams.chef,
+  const CommonAddresses = [
     vault.address,
     strategyParams.unirouter,
     strategyParams.keeper,
     strategyParams.strategist,
     strategyParams.beefyFeeRecipient,
+    strategyParams.beefyFeeConfig
+  ];
+
+  const strategyConstructorArguments = [
+    strategyParams.want,
+    strategyParams.poolId,
+    strategyParams.chef,
+    CommonAddresses,
     strategyParams.outputToNativeRoute,
     strategyParams.secondOutputToNativeRoute,
     strategyParams.outputToLp0Route,
