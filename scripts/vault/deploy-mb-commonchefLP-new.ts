@@ -9,45 +9,45 @@ import { BeefyChain } from "../../utils/beefyChain";
 const registerSubsidy = require("../../utils/registerSubsidy");
 
 const {
-  platforms: { pancake, beefyfinance },
+  platforms: { stellaswap, beefyfinance },
   tokens: {
-    //CAKE: { address: CAKE },
-    //USDT: { address: USDT },
+    STELLA: { address: STELLA },
+   // GLMR: { address: GLMR },
   },
-} = addressBook.bsc;
+} = addressBook.moonbeam;
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x25bfD3162360BbD8FF97b86169288b311c2A68D7"); // TODO
-const PEEL = web3.utils.toChecksumAddress("0x734548a9e43d2D564600b1B2ed5bE9C2b911c6aB");
-const BUSD = web3.utils.toChecksumAddress("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56");
+const want = web3.utils.toChecksumAddress("0x8577273FB3B72306F3A59E26ab77116f5D428DAa"); // TODO
+const ETH = web3.utils.toChecksumAddress("0xab3f0245B83feB11d15AAffeFD7AD465a59817eD");
+const GLMR = web3.utils.toChecksumAddress("0xAcc15dC74880C9944775448304B263D191c6077F");
 const CAKE = web3.utils.toChecksumAddress("0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82");
 const BNB = web3.utils.toChecksumAddress("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c");  
 
 const vaultParams = {
-  mooName: "Moo Cake V2 PEEL-BUSD", // TODO
-  mooSymbol: "mooCakeV2PEEL-BUSD", // TOD
+  mooName: "Moo Stellaswap ETH-GLMR", // TODO
+  mooSymbol: "mooStellaswapETH-GLMR", // TOD
   delay: 21600,
 };
 
 const strategyParams = {
   want,
-  poolId: 112, // TODO
-  chef: "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652",
-  unirouter: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-  strategist: "0x22e3709Cf6476d67F468F29E4dE2051ED53747A4", // some address
+  poolId: 29, // TODO
+  chef: "0xF3a5454496E26ac57da879bf3285Fa85DEBF0388",
+  unirouter: "0x70085a09D30D6f8C4ecF6eE10120d1847383BB57",
+  strategist: "0x1A2aff8453b211F1fcFE97718A0f23232A6A5403", // some address
   keeper: beefyfinance.keeper,
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
-  beefyFeeConfig: "0x97F86f2dC863D98e423E288938dF257D1b6e1553",
-  outputToNativeRoute: [CAKE, BNB], //TODO
-  outputToLp0Route: [CAKE, BUSD, PEEL], // TODO
-  outputToLp1Route: [CAKE, BUSD], // TODO
+  beefyFeeConfig: "0xeEaFF5116C09ECc20Ab72b53860A7ceAd97F0Ab4",
+  outputToNativeRoute: [STELLA, GLMR], //TODO
+  nativeToLp0Route: [GLMR, ETH], // TODO
+  nativeToLp1Route: [GLMR], // TODO
   pendingRewardsFunctionName: "pendingCake", // used for rewardsAvailable(), use correct function name from masterchef
 };
 
 const contractNames = {
   vault: "BeefyVaultV6",
-  strategy: "StrategyCommonChefLP",
+  strategy: "StrategyStellaswapMultiRewardsLP",
 };
 
 async function main() {
@@ -96,8 +96,8 @@ async function main() {
     strategyParams.chef,
     CommonAddresses,
     strategyParams.outputToNativeRoute,
-    strategyParams.outputToLp0Route,
-    strategyParams.outputToLp1Route,
+    strategyParams.nativeToLp0Route,
+    strategyParams.nativeToLp1Route,
   ];
   const strategy = await Strategy.deploy(...strategyConstructorArguments);
   await strategy.deployed();

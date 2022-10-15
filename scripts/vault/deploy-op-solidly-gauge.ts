@@ -20,14 +20,15 @@ const {
 
 const shouldVerifyOnEtherscan = false;
 
-const want = web3.utils.toChecksumAddress("0x389d9aeA762fd5F9FBD4434D8E11295F15097B67");     //TODO
-const gauge = web3.utils.toChecksumAddress("0x2EE6587E32BED1CEddaC42618320c4839D4a3F9c");    //TODO
+const want = web3.utils.toChecksumAddress("0x050D6Dbc73F6993A29e1327846117C4F5Fc7D68E");     //TODO
+const gauge = web3.utils.toChecksumAddress("0x1d7334f6c718EB1956B31F0E292AaE69D0E65a05");    //TODO
 const agEUR = web3.utils.toChecksumAddress("0x9485aca5bbBE1667AD97c7fE7C4531a624C8b1ED");
+const jEUR = web3.utils.toChecksumAddress("0x79AF5dd14e855823FA3E9ECAcdF001D99647d043");
 //const ensId = ethers.utils.formatBytes32String("cake.eth");
 
 const vaultParams = {
-  mooName: "Moo Velodrome agEUR-MAI",
-  mooSymbol: "mooVelodromeagEUR-MAI",
+  mooName: "Moo Velodrome jEUR-agEUR",
+  mooSymbol: "mooVelodromejEUR-agEUR",
   delay: 21600,
 };
 
@@ -40,8 +41,8 @@ const strategyParams = {
   beefyFeeRecipient: beefyfinance.beefyFeeRecipient,
   beefyFeeConfig: beefyfinance.beefyFeeConfig,
   outputToNativeRoute: [[VELO, ETH, false]],
-  outputToLp0Route: [[VELO, USDC, false], [USDC, agEUR, false]],
-  outputToLp1Route: [[VELO, USDC, false], [USDC, MAI, true]],
+  outputToLp0Route: [[VELO, USDC, false], [USDC, agEUR, false], [agEUR, jEUR, true]],
+  outputToLp1Route: [[VELO, USDC, false], [USDC, agEUR, false]],
 };
 
 // stable Swap: true
