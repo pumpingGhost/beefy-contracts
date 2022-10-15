@@ -5,43 +5,35 @@ pragma solidity ^0.8.0;
 import "@openzeppelin-4/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin-4/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../../interfaces/kyber/IDMMRouter.sol";
-import "../../interfaces/common/IUniswapRouterETH.sol";
 import "../../interfaces/common/IMasterChef.sol";
-import "../../interfaces/curve/ICurveSwap.sol";
-import "../../interfaces/kyber/IJarvisMinter.sol";
+import "../../interfaces/stargate/IStargateRouter.sol";
 import "../Common/StratFeeManager.sol";
+import "../../utils/BalancerUtils.sol";
 import "../../utils/StringUtils.sol";
+import "../../utils/GasFeeThrottler.sol";
 
-contract StrategyJarvis is StratFeeManager {
+contract StrategyStargateArb is StratFeeManager, GasFeeThrottler {
     using SafeERC20 for IERC20;
-
-    struct JarvisContracts {
-        address synth;
-        address minter;
-    }
+    using BalancerUtils for IBalancerVault;
 
     // Tokens used
     address public native;
     address public output;
     address public want;
-    address public stable;
+    address public depositToken;
 
     // Third party contracts
     address public chef;
     uint256 public poolId;
-    address public quickRouter = address(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff);
-    JarvisContracts public jarvis;
-    uint256 public depositIndex;
+    address public stargateRouter;
+    uint256 public routerPoolId;
 
     bool public harvestOnDeposit;
     uint256 public lastHarvest;
     string public pendingRewardsFunctionName;
 
-    // Routes
-    IERC20[] public outputToStableRoute;
-    address[] public stableToNativeRoute;
-    address[] public outputToStablePoolsPath;
+    BalancerUtils.BatchSwapInfo public outputToNativePath;
+    BalancerUtils.BatchSwapInfo public outputToDepositPath;
 
     event StratHarvest(address indexed harvester, uint256 wantHarvested, uint256 tvl);
     event Deposit(uint256 tvl);
@@ -52,29 +44,26 @@ contract StrategyJarvis is StratFeeManager {
         address _want,
         uint256 _poolId,
         address _chef,
-        uint256 _depositIndex,
-        JarvisContracts memory _jarvis,
+        address _stargateRouter,
+        uint256 _routerPoolId,
         CommonAddresses memory _commonAddresses,
-        address[] memory _outputToStableRoute,
-        address[] memory _stableToNativeRoute,
-        address[] memory _outputToStablePoolsPath
+        bytes32[] memory _outputToNativePools,
+        bytes32[] memory _outputToDepositPools,
+        address[] memory _outputToNativeRoute,
+        address[] memory _outputToDepositRoute
     ) StratFeeManager(_commonAddresses) {
         want = _want;
         poolId = _poolId;
         chef = _chef;
-        depositIndex = _depositIndex;
-        jarvis = _jarvis;
+        stargateRouter = _stargateRouter;
+        routerPoolId = _routerPoolId;
 
-        stable = _outputToStableRoute[_outputToStableRoute.length - 1];
-        native = _stableToNativeRoute[_stableToNativeRoute.length - 1];
-        output = _outputToStableRoute[0];
+        output = _outputToNativeRoute[0];
+        native = _outputToNativeRoute[_outputToNativeRoute.length - 1];
+        depositToken = _outputToDepositRoute[_outputToDepositRoute.length - 1];
 
-        for (uint i = 0; i < _outputToStableRoute.length; i++) {
-            outputToStableRoute.push(IERC20(_outputToStableRoute[i]));
-        }
-
-        stableToNativeRoute = _stableToNativeRoute;
-        outputToStablePoolsPath = _outputToStablePoolsPath;
+        BalancerUtils.assignBatchSwapInfo(outputToNativePath, _outputToNativePools, _outputToNativeRoute);
+        BalancerUtils.assignBatchSwapInfo(outputToDepositPath, _outputToDepositPools, _outputToDepositRoute);
 
         _giveAllowances();
     }
@@ -113,19 +102,23 @@ contract StrategyJarvis is StratFeeManager {
         emit Withdraw(balanceOf());
     }
 
-    function beforeDeposit() external override {
+    function beforeDeposit() external virtual override {
         if (harvestOnDeposit) {
             require(msg.sender == vault, "!vault");
             _harvest(tx.origin);
         }
     }
 
-    function harvest() external virtual {
+    function harvest() external gasThrottle virtual {
         _harvest(tx.origin);
     }
 
-    function harvest(address callFeeRecipient) external virtual {
+    function harvest(address callFeeRecipient) external gasThrottle virtual {
         _harvest(callFeeRecipient);
+    }
+
+    function managerHarvest() external onlyManager {
+        _harvest(tx.origin);
     }
 
     // compounds earnings and charges performance fee
@@ -146,21 +139,18 @@ contract StrategyJarvis is StratFeeManager {
     // performance fees
     function chargeFees(address callFeeRecipient) internal {
         IFeeConfig.FeeCategory memory fees = getFees();
-        uint256 toStable = IERC20(output).balanceOf(address(this));
-        IDMMRouter(unirouter).swapExactTokensForTokens(toStable, 0, outputToStablePoolsPath, outputToStableRoute, address(this), block.timestamp);
+        uint256 toNative = IERC20(output).balanceOf(address(this)) * fees.total / DIVISOR;
+        IBalancerVault(unirouter).swap(outputToNativePath, toNative);
 
-        uint256 toNative = IERC20(stable).balanceOf(address(this)) * fees.total / DIVISOR;
-        IUniswapRouterETH(quickRouter).swapExactTokensForTokens(toNative, 0, stableToNativeRoute, address(this), block.timestamp);
+        uint256 nativeFeeBal = IERC20(native).balanceOf(address(this));
 
-        uint256 nativeBal = IERC20(native).balanceOf(address(this));
-
-        uint256 callFeeAmount = nativeBal * fees.call / DIVISOR;
+        uint256 callFeeAmount = nativeFeeBal * fees.call / DIVISOR;
         IERC20(native).safeTransfer(callFeeRecipient, callFeeAmount);
 
-        uint256 beefyFeeAmount = nativeBal * fees.beefy / DIVISOR;
+        uint256 beefyFeeAmount = nativeFeeBal * fees.beefy / DIVISOR;
         IERC20(native).safeTransfer(beefyFeeRecipient, beefyFeeAmount);
 
-        uint256 strategistFeeAmount = nativeBal * fees.strategist / DIVISOR;
+        uint256 strategistFeeAmount = nativeFeeBal * fees.strategist / DIVISOR;
         IERC20(native).safeTransfer(strategist, strategistFeeAmount);
 
         emit ChargedFees(callFeeAmount, beefyFeeAmount, strategistFeeAmount);
@@ -168,20 +158,11 @@ contract StrategyJarvis is StratFeeManager {
 
     // Adds liquidity to AMM and gets more LP tokens.
     function addLiquidity() internal {
-        uint256 stableBal = IERC20(stable).balanceOf(address(this));
-        IJarvisMinter.MintParams memory mintParams =
-            IJarvisMinter.MintParams(
-                1,
-                stableBal,
-                block.timestamp,
-                address(this)
-            );
-        IJarvisMinter(jarvis.minter).mint(mintParams);
+        uint256 toDeposit = IERC20(output).balanceOf(address(this));
+        IBalancerVault(unirouter).swap(outputToDepositPath, toDeposit);
 
-        uint256 depositBal = IERC20(jarvis.synth).balanceOf(address(this));
-        uint256[2] memory amounts;
-        amounts[depositIndex] = depositBal;
-        ICurveSwap(want).add_liquidity(amounts, 1);
+        uint256 depositBal = IERC20(depositToken).balanceOf(address(this));
+        IStargateRouter(stargateRouter).addLiquidity(routerPoolId, depositBal, address(this));
     }
 
     // calculate the total underlaying 'want' held by the strat.
@@ -208,13 +189,13 @@ contract StrategyJarvis is StratFeeManager {
     function rewardsAvailable() public view returns (uint256) {
         string memory signature = StringUtils.concat(pendingRewardsFunctionName, "(uint256,address)");
         bytes memory result = Address.functionStaticCall(
-            chef, 
+            chef,
             abi.encodeWithSignature(
                 signature,
                 poolId,
                 address(this)
             )
-        );  
+        );
         return abi.decode(result, (uint256));
     }
 
@@ -222,10 +203,14 @@ contract StrategyJarvis is StratFeeManager {
     function callReward() public view returns (uint256) {
         IFeeConfig.FeeCategory memory fees = getFees();
         uint256 outputBal = rewardsAvailable();
-        uint256[] memory amountOutFromOutput = IDMMRouter(unirouter).getAmountsOut(outputBal, outputToStablePoolsPath, outputToStableRoute);
-        uint256 stableOut = amountOutFromOutput[amountOutFromOutput.length -1];
-        uint256[] memory amountOutFromStable = IUniswapRouterETH(quickRouter).getAmountsOut(stableOut, stableToNativeRoute);
-        uint256 nativeOut = amountOutFromStable[amountOutFromStable.length -1];
+        uint256 nativeOut;
+        if (outputBal > 0) {
+            uint256[] memory amountsOut = IBalancerVault(unirouter).getAmountsOut(
+                outputToNativePath,
+                outputBal
+            );
+            nativeOut = amountsOut[amountsOut.length - 1];
+        }
 
         return nativeOut * fees.total / DIVISOR * fees.call / DIVISOR;
     }
@@ -238,6 +223,10 @@ contract StrategyJarvis is StratFeeManager {
         } else {
             setWithdrawalFee(10);
         }
+    }
+
+    function setShouldGasThrottle(bool _shouldGasThrottle) external onlyManager {
+        shouldGasThrottle = _shouldGasThrottle;
     }
 
     // called as part of strat migration. Sends all the available funds back to the vault.
@@ -273,28 +262,20 @@ contract StrategyJarvis is StratFeeManager {
     function _giveAllowances() internal {
         IERC20(want).safeApprove(chef, type(uint).max);
         IERC20(output).safeApprove(unirouter, type(uint).max);
-        IERC20(stable).safeApprove(quickRouter, type(uint).max);
-        IERC20(stable).safeApprove(jarvis.minter, type(uint).max);
-        IERC20(jarvis.synth).safeApprove(want, type(uint).max);
+        IERC20(depositToken).safeApprove(stargateRouter, type(uint).max);
     }
 
     function _removeAllowances() internal {
         IERC20(want).safeApprove(chef, 0);
         IERC20(output).safeApprove(unirouter, 0);
-        IERC20(stable).safeApprove(quickRouter, 0);
-        IERC20(stable).safeApprove(jarvis.minter, 0);
-        IERC20(jarvis.synth).safeApprove(want, 0);
+        IERC20(depositToken).safeApprove(stargateRouter, 0);
     }
 
-    function outputToStable() external view returns (IERC20[] memory) {
-        return outputToStableRoute;
+    function outputToNative() external view returns (address[] memory) {
+        return outputToNativePath.route;
     }
 
-    function stableToNative() external view returns (address[] memory) {
-        return stableToNativeRoute;
-    }
-
-    function outputToStablePools() external view returns (address[] memory) {
-        return outputToStablePoolsPath;
+    function outputToDeposit() external view returns (address[] memory) {
+        return outputToDepositPath.route;
     }
 }
